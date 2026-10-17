@@ -527,6 +527,9 @@
                     behaviorLog: [{ mark: "متوسط", stage: "الصف الثالث", section: "أ", studyType: "مسائي", subject: "الرياضيات", date: "2026-09-12" }]
                 }
             ],
+            // إعدادات سجل الدرجات المدرسي (تُحفظ مع بيانات المدرسة)
+            gradeSettings: { term1MonthsCount: 3, term2MonthsCount: 3, midyearMode: 'direct' },
+            gradeSchemaVersion: 1,
             subjectCatalog: [],
             subjects: [
                 { id: 1, name: "الرياضيات", class: "الصف الأول", teacher: "أ. أحمد محمد" },
@@ -589,6 +592,47 @@
             appState.subjects = Array.isArray(appState.subjects) ? appState.subjects : [];
             appState.schedule = Array.isArray(appState.schedule) ? appState.schedule : [];
             appState.savedSessions = Array.isArray(appState.savedSessions) ? appState.savedSessions : [];
+
+            appState.gradeSettings = {
+                term1MonthsCount: 3,
+                term2MonthsCount: 3,
+                midyearMode: 'direct',
+                ...(appState.gradeSettings || {})
+            };
+
+            // ترحيل درجات النموذج القديم إلى درجات شهرية من 100 مرة واحدة، مع إبقاء بيانات الطالب وخصائصه الأخرى كما هي.
+            if (Number(appState.gradeSchemaVersion || 1) < 2) {
+                appState.students.forEach(student => {
+                    if (!student || typeof student !== 'object') return;
+                    const newGradeKeys = ['term1Month1','term1Month2','term1Month3','term2Month1','term2Month2','term2Month3','midyearDirect','midyearWritten','midyearOral'];
+                    const hasNewGradeModel = newGradeKeys.some(key => Object.prototype.hasOwnProperty.call(student, key));
+                    const hasLegacyTermMarks = ['t1Exam','t1Eval','t2Exam','t2Eval'].some(key => Object.prototype.hasOwnProperty.call(student, key));
+                    if (!hasNewGradeModel && hasLegacyTermMarks) {
+                        const oldTerm1 = Math.max(0, Math.min(25, (Number(student.t1Exam) || 0) + (Number(student.t1Eval) || 0)));
+                        const oldTerm2 = Math.max(0, Math.min(25, (Number(student.t2Exam) || 0) + (Number(student.t2Eval) || 0)));
+                        const term1Percent = Math.round((oldTerm1 / 25 * 100) * 100) / 100;
+                        const term2Percent = Math.round((oldTerm2 / 25 * 100) * 100) / 100;
+                        [1, 2, 3].forEach(month => {
+                            student[`term1Month${month}`] = term1Percent;
+                            student[`term2Month${month}`] = term2Percent;
+                        });
+                        // درجة نصف السنة لم تكن موجودة في النموذج السابق؛ تُترك صفراً كي تُدخل من تبويبها الجديد.
+                        student.midyearDirect = 0;
+                        student.midyearWritten = 0;
+                        student.midyearOral = 0;
+                        if (student.final !== undefined && student.final !== null) {
+                            student.final = Math.max(0, Math.min(100, (Number(student.final) || 0) * 2));
+                        }
+                    }
+                });
+                appState.gradeSchemaVersion = 2;
+            }
+            appState.students.forEach(student => {
+                if (!student || typeof student !== 'object') return;
+                ['term1Month1','term1Month2','term1Month3','term2Month1','term2Month2','term2Month3','midyearDirect','midyearWritten','midyearOral','final'].forEach(key => {
+                    if (student[key] === undefined || student[key] === null || student[key] === '') student[key] = 0;
+                });
+            });
 
             // Migrate saved data from the former college-oriented version.
             const schoolText = value => {
@@ -2135,48 +2179,34 @@
             showToast("جاري تحميل بيانات الجلسة للتعديل...");
         }
 
-        // --- 6. GRADES TAB RENDERER ---
+        // --- 6. سجل الدرجات المدرسي ---
         function renderGradesTab(container) {
             let classOptions = appState.classes.map(c => `
                 <option value="${c.name} - ${c.section} - ${c.studyType || 'صباحي'}">${c.name} (شعبة ${c.section} - ${c.studyType || 'صباحي'})</option>
             `).join('');
-
             container.innerHTML = `
                 <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80 mb-3.5">
                     <h3 class="font-black text-slate-800 text-xs mb-2.5 flex items-center gap-1.5">
                         <i class="fa-solid fa-award text-amber-500"></i>
-                        <span>سجل وادارة الدرجات والنتائج المدرسية</span>
+                        <span>سجل الدرجات المدرسي والنتائج من 100</span>
                     </h3>
                     <div class="mb-3">
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">الصف والشعبة ونوع الدراسة:</label>
+                        <label class="block text-[10px] font-bold text-slate-600 mb-1">الصف والشعبة:</label>
                         <select id="grd-class-select" onchange="renderGradesContent()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-700 outline-none">
                             <option value="all">جميع الصفوف والشعب</option>
                             ${classOptions}
                         </select>
                     </div>
-
-                    <div class="flex bg-slate-200/80 p-1 rounded-2xl text-[9px] font-black text-slate-700 gap-1 overflow-x-auto no-scrollbar">
-                        <button onclick="switchGradesSubTab(0)" id="grd-subtab-0" class="flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap bg-slate-900 text-amber-400 shadow-xs">
-                            الفصل الأول (25)
-                        </button>
-                        <button onclick="switchGradesSubTab(1)" id="grd-subtab-1" class="flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap hover:bg-slate-300">
-                            الفصل الثاني (25)
-                        </button>
-                        <button onclick="switchGradesSubTab(2)" id="grd-subtab-2" class="flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap hover:bg-slate-300">
-                            درجة السعي (50)
-                        </button>
-                        <button onclick="switchGradesSubTab(3)" id="grd-subtab-3" class="flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap hover:bg-slate-300">
-                            الامتحان النهائي (50)
-                        </button>
-                        <button onclick="switchGradesSubTab(4)" id="grd-subtab-4" class="flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap hover:bg-slate-300">
-                            النتيجة النهائية (100)
-                        </button>
+                    <div class="flex bg-slate-200/80 p-1 rounded-2xl border border-slate-200 text-[9px] font-black text-slate-700 gap-1 overflow-x-auto no-scrollbar shadow-inner">
+                        <button type="button" onclick="switchGradesSubTab(0)" id="grd-subtab-0" aria-pressed="true" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap bg-slate-900 text-amber-400 shadow-md flex items-center justify-center gap-1"><i class="fa-solid fa-book-open text-[10px]"></i><span>الفصل الأول</span></button>
+                        <button type="button" onclick="switchGradesSubTab(1)" id="grd-subtab-1" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-calendar-check text-[10px]"></i><span>نصف السنة</span></button>
+                        <button type="button" onclick="switchGradesSubTab(2)" id="grd-subtab-2" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-book-open-reader text-[10px]"></i><span>الفصل الثاني</span></button>
+                        <button type="button" onclick="switchGradesSubTab(3)" id="grd-subtab-3" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-pen-to-square text-[10px]"></i><span>الامتحان النهائي</span></button>
+                        <button type="button" onclick="switchGradesSubTab(4)" id="grd-subtab-4" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-square-poll-vertical text-[10px]"></i><span>النتيجة من 100</span></button>
                     </div>
                 </div>
-
                 <div id="grades-subtab-content"></div>
             `;
-
             renderGradesContent();
         }
 
@@ -2185,302 +2215,152 @@
             for (let i = 0; i < 5; i++) {
                 const btn = document.getElementById(`grd-subtab-${i}`);
                 if (!btn) continue;
-                if (i === subIndex) {
-                    btn.className = "flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap bg-slate-900 text-amber-400 font-black shadow-xs";
-                } else {
-                    btn.className = "flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap hover:bg-slate-300 text-slate-700 font-bold";
-                }
+                btn.className = i === subIndex
+                    ? "min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap bg-slate-900 text-amber-400 font-black shadow-md flex items-center justify-center gap-1"
+                    : "min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1";
+                btn.setAttribute('aria-pressed', i === subIndex ? 'true' : 'false');
             }
             renderGradesContent();
         }
+
+        function numericGrade(value, max = 100) {
+            return Math.min(max, Math.max(0, Number(value) || 0));
+        }
+        function roundGrade(value) { return Math.round((Number(value) || 0) * 100) / 100; }
+        function formatGrade(value) { return Number.isFinite(Number(value)) ? String(roundGrade(value)) : '0'; }
+        function getTermGrade(student, termNumber) {
+            const count = Number(appState.gradeSettings[`term${termNumber}MonthsCount`]) === 2 ? 2 : 3;
+            let total = 0;
+            for (let month = 1; month <= count; month++) total += numericGrade(student[`term${termNumber}Month${month}`]);
+            return roundGrade(total / count);
+        }
+        function getMidyearGrade(student) {
+            if (appState.gradeSettings.midyearMode === 'split') {
+                return roundGrade(numericGrade(student.midyearWritten, 80) + numericGrade(student.midyearOral, 20));
+            }
+            return roundGrade(numericGrade(student.midyearDirect, 100));
+        }
+        function getAnnualEffortGrade(student) {
+            return roundGrade((getTermGrade(student, 1) + getMidyearGrade(student) + getTermGrade(student, 2)) / 3);
+        }
+        function getFinalResultGrade(student) {
+            return roundGrade((getAnnualEffortGrade(student) + numericGrade(student.final, 100)) / 2);
+        }
+        function getGradeResultStatus(student) { return getFinalResultGrade(student) >= 50 ? 'ناجح' : 'راسب'; }
 
         function renderGradesContent() {
             const classFilterVal = document.getElementById('grd-class-select') ? document.getElementById('grd-class-select').value : 'all';
             const container = document.getElementById('grades-subtab-content');
             if (!container) return;
-
             let filtered = [...appState.students];
-
             if (classFilterVal !== 'all') {
                 const [cName, sSec, sStudy] = classFilterVal.split(' - ');
-                filtered = filtered.filter(s => 
-                    s.class.trim() === cName.trim() && 
-                    s.section.trim() === sSec.trim() && 
-                    (s.studyType || 'صباحي').trim() === sStudy.trim()
-                );
+                filtered = filtered.filter(s => (s.class || '').trim() === (cName || '').trim() && (s.section || '').trim() === (sSec || '').trim() && (s.studyType || 'صباحي').trim() === (sStudy || '').trim());
             }
-
             filtered = sortStudentsAlphabetically(filtered);
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="bg-white rounded-3xl p-5 text-center text-xs text-slate-400 font-bold">لا يوجد طلبة مطبقين للفلاتر المحددة</div>`;
+            if (!filtered.length) {
+                container.innerHTML = `<div class="bg-white rounded-3xl p-5 text-center text-xs text-slate-400 font-bold">لا يوجد طلبة في الصف/الشعبة المحددة</div>`;
                 return;
             }
-
-            let html = '';
-
-            // SubTab 0: الفصل الأول
-            if (activeGradesSubTab === 0) {
-                let rows = filtered.map((s, idx) => {
-                    let t1Exam = Number(s.t1Exam) || '';
-                    let t1Eval = Number(s.t1Eval) || '';
-                    let sum = (Number(t1Exam) || 0) + (Number(t1Eval) || 0);
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 font-bold text-center">${idx+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center">
-                                <input type="number" min="0" max="20" id="inp-t1exam-${s.id}" value="${t1Exam}" onchange="recalcTerm1Sum(${s.id})" class="w-12 bg-slate-50 border p-1 rounded-lg text-center font-bold text-slate-900 outline-none">
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="number" min="0" max="5" id="inp-t1eval-${s.id}" value="${t1Eval}" onchange="recalcTerm1Sum(${s.id})" class="w-12 bg-slate-50 border p-1 rounded-lg text-center font-bold text-slate-900 outline-none">
-                            </td>
-                            <td class="p-2 text-center font-black text-indigo-700 text-sm" id="sum-t1-${s.id}">${sum}</td>
-                        </tr>
-                    `;
+            if (activeGradesSubTab === 0 || activeGradesSubTab === 2) {
+                const term = activeGradesSubTab === 0 ? 1 : 2;
+                const count = Number(appState.gradeSettings[`term${term}MonthsCount`]) === 2 ? 2 : 3;
+                const accent = term === 1 ? 'text-indigo-700' : 'text-sky-700';
+                const panelClass = term === 1 ? 'bg-indigo-50 border border-indigo-200 text-indigo-900' : 'bg-sky-50 border border-sky-200 text-sky-900';
+                const iconClass = term === 1 ? 'text-indigo-600' : 'text-sky-600';
+                const rows = filtered.map((student, idx) => {
+                    const months = [1,2,3].filter(month => month <= count).map(month => `
+                        <td class="p-2 text-center"><input type="number" min="0" max="100" step="0.5" inputmode="decimal" id="inp-t${term}m${month}-${student.id}" value="${numericGrade(student[`term${term}Month${month}`])}" oninput="updateMonthlyMark(${JSON.stringify(student.id)}, ${term}, ${month}, this.value)" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold text-slate-900 outline-none"></td>
+                    `).join('');
+                    return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 font-bold text-center">${idx+1}</td><td class="p-2 font-bold text-slate-800">${student.name}</td>${months}<td class="p-2 text-center font-black ${accent} text-sm" id="term-score-${term}-${student.id}">${formatGrade(getTermGrade(student, term))}</td></tr>`;
                 }).join('');
-
-                html = `
+                container.innerHTML = `
                     <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded-2xl mb-3 flex items-center justify-between text-indigo-900">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-circle-info text-indigo-600"></i>
-                                <p class="text-[10px] font-bold">درجة الفصل الأول: (20 للـامتحان + 5 للـتقييم = 25 درجة)</p>
-                            </div>
+                        <div class="${panelClass} p-2.5 rounded-2xl mb-3">
+                            <div class="flex items-center gap-2"><i class="fa-solid fa-circle-info ${iconClass}"></i><p class="text-[10px] font-bold">كل درجة شهر من 100. درجة الفصل = مجموع درجات الأشهر ÷ عدد الأشهر المختار (2 أو 3).</p></div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-right">
-                                <thead class="bg-slate-900 text-amber-400 text-[10px]">
-                                    <tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">امتحان (20)</th><th class="p-2 text-center">تقييم (5)</th><th class="p-2 text-center">المجموع</th></tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                        <button onclick="saveTerm1Grades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 active:scale-98">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            <span>حفظ درجات الفصل الأول</span>
-                        </button>
-                    </div>
-                `;
-            } 
-            // SubTab 1: الفصل الثاني
-            else if (activeGradesSubTab === 1) {
-                let rows = filtered.map((s, idx) => {
-                    let t2Exam = Number(s.t2Exam) || '';
-                    let t2Eval = Number(s.t2Eval) || '';
-                    let sum = (Number(t2Exam) || 0) + (Number(t2Eval) || 0);
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 font-bold text-center">${idx+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center">
-                                <input type="number" min="0" max="20" id="inp-t2exam-${s.id}" value="${t2Exam}" onchange="recalcTerm2Sum(${s.id})" class="w-12 bg-slate-50 border p-1 rounded-lg text-center font-bold text-slate-900 outline-none">
-                            </td>
-                            <td class="p-2 text-center">
-                                <input type="number" min="0" max="5" id="inp-t2eval-${s.id}" value="${t2Eval}" onchange="recalcTerm2Sum(${s.id})" class="w-12 bg-slate-50 border p-1 rounded-lg text-center font-bold text-slate-900 outline-none">
-                            </td>
-                            <td class="p-2 text-center font-black text-sky-700 text-sm" id="sum-t2-${s.id}">${sum}</td>
-                        </tr>
-                    `;
-                }).join('');
-
-                html = `
-                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="bg-sky-50 border border-sky-200 p-2.5 rounded-2xl mb-3 flex items-center justify-between text-sky-900">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-circle-info text-sky-600"></i>
-                                <p class="text-[10px] font-bold">درجة الفصل الثاني: (20 للـامتحان + 5 للـتقييم = 25 درجة)</p>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-right">
-                                <thead class="bg-slate-900 text-amber-400 text-[10px]">
-                                    <tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">امتحان (20)</th><th class="p-2 text-center">تقييم (5)</th><th class="p-2 text-center">المجموع</th></tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                        <button onclick="saveTerm2Grades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 active:scale-98">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            <span>حفظ درجات الفصل الثاني</span>
-                        </button>
-                    </div>
-                `;
-            } 
-            // SubTab 2: درجة السعي
-            else if (activeGradesSubTab === 2) {
-                let rows = filtered.map((s, idx) => {
-                    let t1 = (s.t1Exam||0) + (s.t1Eval||0);
-                    let t2 = (s.t2Exam||0) + (s.t2Eval||0);
-                    let saai = t1 + t2;
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 font-bold text-center">${idx+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center font-semibold text-indigo-700">${t1}</td>
-                            <td class="p-2 text-center font-semibold text-sky-700">${t2}</td>
-                            <td class="p-2 text-center font-black text-amber-600 text-sm">${saai}</td>
-                        </tr>
-                    `;
-                }).join('');
-
-                html = `
-                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-2xl mb-3 flex items-center justify-between text-amber-900">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-calculator text-amber-600"></i>
-                                <p class="text-[10px] font-bold">درجة السعي: (درجة الفصل الأول 25 + درجة الفصل الثاني 25 = 50)</p>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-right">
-                                <thead class="bg-slate-900 text-amber-400 text-[10px]">
-                                    <tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">فصل 1 (25)</th><th class="p-2 text-center">فصل 2 (25)</th><th class="p-2 text-center">السعي الكلي</th></tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            } 
-            // SubTab 3: الامتحان النهائي
-            else if (activeGradesSubTab === 3) {
-                let rows = filtered.map((s, idx) => {
-                    let saai = (s.t1Exam||0) + (s.t1Eval||0) + (s.t2Exam||0) + (s.t2Eval||0);
-                    let final = Number(s.final) || '';
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 font-bold text-center">${idx+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center font-bold text-amber-700">${saai}</td>
-                            <td class="p-2 text-center">
-                                <input type="number" min="0" max="50" id="inp-final-${s.id}" value="${final}" class="w-16 bg-slate-50 border p-1 rounded-lg text-center font-bold text-purple-900 outline-none">
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-
-                html = `
-                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="bg-purple-50 border border-purple-200 p-2.5 rounded-2xl mb-3 flex items-center justify-between text-purple-900">
-                            <div class="flex items-center gap-2">
-                                <i class="fa-solid fa-graduation-cap text-purple-600"></i>
-                                <p class="text-[10px] font-bold">الامتحان النهائي: درجة الاختبار النهائي من 50 درجة</p>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-right">
-                                <thead class="bg-slate-900 text-amber-400 text-[10px]">
-                                    <tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">السعي (50)</th><th class="p-2 text-center">الامتحان النهائي (50)</th></tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                        <button onclick="saveFinalGrades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 active:scale-98">
-                            <i class="fa-solid fa-floppy-disk"></i>
-                            <span>حفظ درجات الامتحان النهائي</span>
-                        </button>
-                    </div>
-                `;
-            } 
-            // SubTab 4: النتيجة النهائية
-            else if (activeGradesSubTab === 4) {
-                let rows = filtered.map((s, idx) => {
-                    let saai = (s.t1Exam||0) + (s.t1Eval||0) + (s.t2Exam||0) + (s.t2Eval||0);
-                    let final = s.final || 0;
-                    let total = saai + final;
-                    let passed = total >= 50;
-                    
-                    let rowBgClass = passed ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' : 'bg-rose-50/70 border-rose-200 text-rose-950';
-                    let badgeClass = passed ? 'bg-emerald-600 text-white shadow-xs' : 'bg-rose-600 text-white shadow-xs';
-
-                    return `
-                        <tr class="border-b ${rowBgClass} text-[11px] font-bold">
-                            <td class="p-2 text-center">${idx+1}</td>
-                            <td class="p-2 font-black text-slate-900">${s.name}</td>
-                            <td class="p-2 text-center text-slate-700">${saai}</td>
-                            <td class="p-2 text-center text-slate-700">${final}</td>
-                            <td class="p-2 text-center text-base font-black ${passed ? 'text-emerald-700' : 'text-rose-700'}">${total}</td>
-                            <td class="p-2 text-center">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-black ${badgeClass}">
-                                    ${passed ? 'ناجح ✓' : 'راسب ✗'}
-                                </span>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-
-                html = `
-                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="bg-slate-900 text-white p-3 rounded-2xl mb-3 flex items-center justify-between">
-                            <div>
-                                <h4 class="font-extrabold text-xs text-amber-400">النتيجة النهائية للمادة</h4>
-                                <p class="text-[10px] text-slate-300">درجة السعي (50) + درجة الامتحان النهائي (50) = المجموع الكلي (100)</p>
-                            </div>
-                            <div class="flex gap-1.5 text-[9px] font-bold">
-                                <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md">اخضر: ناجح</span>
-                                <span class="bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-md">احمر: راسب</span>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-right border-collapse">
-                                <thead class="bg-slate-900 text-amber-400 text-[10px]">
-                                    <tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">السعي (50)</th><th class="p-2 text-center">الامتحان النهائي (50)</th><th class="p-2 text-center">المجموع</th><th class="p-2 text-center">النتيجة</th></tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-200">${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
+                        <div class="mb-3 flex items-center gap-2"><label class="text-[10px] font-bold text-slate-600">عدد الأشهر المحتسبة:</label><select onchange="setTermMonthsCount(${term}, this.value)" class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold"><option value="2" ${count === 2 ? 'selected' : ''}>شهران (÷ 2)</option><option value="3" ${count === 3 ? 'selected' : ''}>ثلاثة أشهر (÷ 3)</option></select><span class="text-[9px] text-slate-400">الشهر الثالث اختياري</span></div>
+                        <div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${Array.from({length:count}, (_, i) => `<th class="p-2 text-center">الشهر ${['الأول','الثاني','الثالث'][i]} /100</th>`).join('')}<th class="p-2 text-center">درجة الفصل /100</th></tr></thead><tbody>${rows}</tbody></table></div>
+                        <button onclick="saveMonthlyGrades(${term})" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ درجات ${term === 1 ? 'الفصل الأول' : 'الفصل الثاني'}</span></button>
+                    </div>`;
+                return;
             }
-
-            container.innerHTML = html;
+            if (activeGradesSubTab === 1) {
+                const mode = appState.gradeSettings.midyearMode;
+                const rows = filtered.map((student, idx) => {
+                    const marks = mode === 'split'
+                        ? `<td class="p-2 text-center"><input type="number" min="0" max="80" step="0.5" value="${numericGrade(student.midyearWritten,80)}" oninput="updateMidyearGrade(${JSON.stringify(student.id)}, 'written', this.value)" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold"></td><td class="p-2 text-center"><input type="number" min="0" max="20" step="0.5" value="${numericGrade(student.midyearOral,20)}" oninput="updateMidyearGrade(${JSON.stringify(student.id)}, 'oral', this.value)" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold"></td>`
+                        : `<td class="p-2 text-center"><input type="number" min="0" max="100" step="0.5" value="${numericGrade(student.midyearDirect)}" oninput="updateMidyearGrade(${JSON.stringify(student.id)}, 'direct', this.value)" class="w-16 bg-slate-50 border p-1 rounded-lg text-center font-bold"></td>`;
+                    return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${idx+1}</td><td class="p-2 font-bold text-slate-800">${student.name}</td>${marks}<td id="midyear-score-${student.id}" class="p-2 text-center font-black text-amber-700">${formatGrade(getMidyearGrade(student))}</td></tr>`;
+                }).join('');
+                container.innerHTML = `
+                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
+                        <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-2xl mb-3 text-amber-900"><p class="text-[10px] font-bold">نصف السنة من 100: أدخل الدرجة مباشرة، أو اختر التحريري من 80 والشفهي من 20.</p></div>
+                        <div class="mb-3"><label class="block text-[10px] font-bold text-slate-600 mb-1">طريقة إدخال درجة نصف السنة:</label><select id="midyear-mode-select" onchange="setMidyearMode(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold"><option value="direct" ${mode === 'direct' ? 'selected' : ''}>درجة مباشرة من 100</option><option value="split" ${mode === 'split' ? 'selected' : ''}>تحريري من 80 + شفهي من 20</option></select></div>
+                        <div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${mode === 'split' ? '<th class="p-2 text-center">تحريري /80</th><th class="p-2 text-center">شفهي /20</th>' : '<th class="p-2 text-center">نصف السنة /100</th>'}<th class="p-2 text-center">المجموع /100</th></tr></thead><tbody>${rows}</tbody></table></div>
+                        <button onclick="saveMidyearGrades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ درجات نصف السنة</span></button>
+                    </div>`;
+                return;
+            }
+            if (activeGradesSubTab === 3) {
+                const rows = filtered.map((student, idx) => `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${idx+1}</td><td class="p-2 font-bold text-slate-800">${student.name}</td><td class="p-2 text-center font-bold text-indigo-700">${formatGrade(getAnnualEffortGrade(student))}</td><td class="p-2 text-center"><input type="number" min="0" max="100" step="0.5" id="inp-final-${student.id}" value="${numericGrade(student.final)}" oninput="updateFinalGrade(${JSON.stringify(student.id)}, this.value)" class="w-16 bg-slate-50 border p-1 rounded-lg text-center font-bold text-purple-900 outline-none"></td></tr>`).join('');
+                container.innerHTML = `<div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80"><div class="bg-purple-50 border border-purple-200 p-2.5 rounded-2xl mb-3 text-purple-900"><p class="text-[10px] font-bold">الامتحان النهائي من 100 درجة. السعي السنوي = (الفصل الأول + نصف السنة + الفصل الثاني) ÷ 3.</p></div><div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">السعي السنوي /100</th><th class="p-2 text-center">الامتحان النهائي /100</th></tr></thead><tbody>${rows}</tbody></table></div><button onclick="saveFinalGrades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ درجات الامتحان النهائي</span></button></div>`;
+                return;
+            }
+            const rows = filtered.map((student, idx) => {
+                const t1 = getTermGrade(student, 1), mid = getMidyearGrade(student), t2 = getTermGrade(student, 2);
+                const annual = getAnnualEffortGrade(student), final = numericGrade(student.final), result = getFinalResultGrade(student), passed = result >= 50;
+                const rowBg = passed ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' : 'bg-rose-50/70 border-rose-200 text-rose-950';
+                const badge = passed ? 'bg-emerald-600 text-white shadow-xs' : 'bg-rose-600 text-white shadow-xs';
+                return `<tr class="border-b ${rowBg} text-[10px] font-bold"><td class="p-2 text-center">${idx+1}</td><td class="p-2 font-black text-slate-900">${student.name}</td><td class="p-2 text-center">${formatGrade(t1)}</td><td class="p-2 text-center">${formatGrade(mid)}</td><td class="p-2 text-center">${formatGrade(t2)}</td><td class="p-2 text-center">${formatGrade(annual)}</td><td class="p-2 text-center">${formatGrade(final)}</td><td class="p-2 text-center text-base font-black ${passed ? 'text-emerald-700' : 'text-rose-700'}">${formatGrade(result)}</td><td class="p-2 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-black ${badge}">${passed ? 'ناجح ✓' : 'راسب ✗'}</span></td></tr>`;
+            }).join('');
+            container.innerHTML = `<div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80"><div class="bg-slate-900 text-white p-3 rounded-2xl mb-3"><h4 class="font-extrabold text-xs text-amber-400">النتيجة المدرسية النهائية من 100</h4><p class="text-[10px] text-slate-300 mt-1">السعي السنوي = (الفصل الأول + نصف السنة + الفصل الثاني) ÷ 3، والنتيجة = (السعي السنوي + الامتحان النهائي) ÷ 2.</p></div><div class="overflow-x-auto"><table class="w-full text-right border-collapse"><thead class="bg-slate-900 text-amber-400 text-[9px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">الفصل الأول</th><th class="p-2 text-center">نصف السنة</th><th class="p-2 text-center">الفصل الثاني</th><th class="p-2 text-center">السعي السنوي</th><th class="p-2 text-center">النهائي</th><th class="p-2 text-center">النتيجة /100</th><th class="p-2 text-center">النتيجة</th></tr></thead><tbody class="divide-y divide-slate-200">${rows}</tbody></table></div></div>`;
         }
 
-        function recalcTerm1Sum(studentId) {
-            let exam = parseFloat(document.getElementById(`inp-t1exam-${studentId}`).value) || 0;
-            let evalVal = parseFloat(document.getElementById(`inp-t1eval-${studentId}`).value) || 0;
-            let sumEl = document.getElementById(`sum-t1-${studentId}`);
-            if (sumEl) sumEl.innerText = `${exam + evalVal}`;
-        }
-
-        function recalcTerm2Sum(studentId) {
-            let exam = parseFloat(document.getElementById(`inp-t2exam-${studentId}`).value) || 0;
-            let evalVal = parseFloat(document.getElementById(`inp-t2eval-${studentId}`).value) || 0;
-            let sumEl = document.getElementById(`sum-t2-${studentId}`);
-            if (sumEl) sumEl.innerText = `${exam + evalVal}`;
-        }
-
-        function saveTerm1Grades() {
-            appState.students.forEach(s => {
-                let inpExam = document.getElementById(`inp-t1exam-${s.id}`);
-                let inpEval = document.getElementById(`inp-t1eval-${s.id}`);
-                if (inpExam) s.t1Exam = parseFloat(inpExam.value) || 0;
-                if (inpEval) s.t1Eval = parseFloat(inpEval.value) || 0;
-            });
+        function updateMonthlyMark(studentId, term, month, value) {
+            const student = appState.students.find(item => String(item.id) === String(studentId));
+            if (!student) return;
+            student[`term${term}Month${month}`] = numericGrade(value);
+            const score = document.getElementById(`term-score-${term}-${studentId}`);
+            if (score) score.textContent = formatGrade(getTermGrade(student, term));
             saveAppState();
-            showToast("تم حفظ درجات الفصل الأول بنجاح!");
         }
-
-        function saveTerm2Grades() {
-            appState.students.forEach(s => {
-                let inpExam = document.getElementById(`inp-t2exam-${s.id}`);
-                let inpEval = document.getElementById(`inp-t2eval-${s.id}`);
-                if (inpExam) s.t2Exam = parseFloat(inpExam.value) || 0;
-                if (inpEval) s.t2Eval = parseFloat(inpEval.value) || 0;
-            });
+        function setTermMonthsCount(term, value) {
+            appState.gradeSettings[`term${term}MonthsCount`] = Number(value) === 2 ? 2 : 3;
             saveAppState();
-            showToast("تم حفظ درجات الفصل الثاني بنجاح!");
+            renderGradesContent();
         }
-
-        function saveFinalGrades() {
-            appState.students.forEach(s => {
-                let inpFinal = document.getElementById(`inp-final-${s.id}`);
-                if (inpFinal) s.final = parseFloat(inpFinal.value) || 0;
-            });
+        function setMidyearMode(value) {
+            appState.gradeSettings.midyearMode = value === 'split' ? 'split' : 'direct';
             saveAppState();
-            showToast("تم حفظ درجات الامتحان النهائي بنجاح!");
+            renderGradesContent();
         }
+        function updateMidyearGrade(studentId, field, value) {
+            const student = appState.students.find(item => String(item.id) === String(studentId));
+            if (!student) return;
+            const limits = { direct: 100, written: 80, oral: 20 };
+            const fieldMap = { direct: 'midyearDirect', written: 'midyearWritten', oral: 'midyearOral' };
+            student[fieldMap[field]] = numericGrade(value, limits[field] || 100);
+            const score = document.getElementById(`midyear-score-${studentId}`);
+            if (score) score.textContent = formatGrade(getMidyearGrade(student));
+            saveAppState();
+        }
+        function updateFinalGrade(studentId, value) {
+            const student = appState.students.find(item => String(item.id) === String(studentId));
+            if (!student) return;
+            student.final = numericGrade(value);
+            saveAppState();
+        }
+        function saveMonthlyGrades(term) {
+            saveAppState();
+            showToast(`تم حفظ درجات ${term === 1 ? 'الفصل الأول' : 'الفصل الثاني'} بنجاح`);
+            renderGradesContent();
+        }
+        function saveTerm1Grades() { saveMonthlyGrades(1); }
+        function saveTerm2Grades() { saveMonthlyGrades(2); }
+        function saveMidyearGrades() { saveAppState(); showToast('تم حفظ درجات نصف السنة بنجاح'); renderGradesContent(); }
+        function saveFinalGrades() { saveAppState(); showToast('تم حفظ درجات الامتحان النهائي بنجاح'); renderGradesContent(); }
+
 
         // --- Subject-aware report filters (used by all report categories) ---
         let activeReportKey = '';
@@ -2779,10 +2659,10 @@
                             <p class="text-[10px] font-bold text-slate-700">نتائج الفصول، السعي النصفي، والنهائي</p>
                         </div>
 
-                        ${renderReportButton('grades_by_section', 'درجات الشعبة كاملة', 'طباعة درجات الفصل الأول، الثاني، السعي، الامتحان النهائي، والمجموع النهائي للشعبة', 'fa-list-ol', 'bg-emerald-50 text-emerald-600')}
-                        ${renderReportButton('grades_term_specific', 'درجات الفصل المحدد', 'طباعة درجة فصل معين (الأول، الثاني، السعي، أو النهائي) فقط حسب الصف والشعبة والدراسة', 'fa-file-signature', 'bg-amber-50 text-amber-700')}
-                        ${renderReportButton('grades_passed', 'الطلبة الناجحون', 'قوائم الطلبة الحاصلين على درجة 50 فأعلى', 'fa-circle-check', 'bg-emerald-100 text-emerald-800')}
-                        ${renderReportButton('grades_failed', 'الطلبة الراسبون', 'قوائم الطلبة الراسبين في المادة/السعي', 'fa-circle-xmark', 'bg-rose-100 text-rose-800')}
+                        ${renderReportButton('grades_by_section', 'درجات الشعبة كاملة', 'كشف الفصل الأول ونصف السنة والفصل الثاني والسعي السنوي والنهائي والنتيجة من 100', 'fa-list-ol', 'bg-emerald-50 text-emerald-600')}
+                        ${renderReportButton('grades_term_specific', 'درجات الفصل المحدد', 'طباعة درجات الفصل الأول أو نصف السنة أو الفصل الثاني أو السعي السنوي أو النهائي والنتيجة من 100', 'fa-file-signature', 'bg-amber-50 text-amber-700')}
+                        ${renderReportButton('grades_passed', 'الطلبة الناجحون', 'قوائم الطلبة الحاصلين على نتيجة نهائية من 50 فأعلى من 100', 'fa-circle-check', 'bg-emerald-100 text-emerald-800')}
+                        ${renderReportButton('grades_failed', 'الطلبة الراسبون', 'قوائم الطلبة الذين تقل نتيجتهم النهائية عن 50 من 100', 'fa-circle-xmark', 'bg-rose-100 text-rose-800')}
                         ${renderReportButton('grades_min_max', 'أعلى وأدنى الدرجات', 'إحصائيات أعلى وأقل درجة ومتفوقي الدفعة', 'fa-chart-line', 'bg-amber-50 text-amber-600')}
                     </div>
                 </div>
@@ -3101,10 +2981,12 @@
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-600 mb-1">نوع الكشف:</label>
                                 <select id="rep-term-type" onchange="updateTermSpecificGradesReport()" class="w-full bg-slate-50 border p-1.5 rounded-xl text-xs font-bold">
-                                    <option value="t1">الفصل الأول (25)</option>
-                                    <option value="t2">الفصل الثاني (25)</option>
-                                    <option value="saai">درجة السعي فقط (50)</option>
-                                    <option value="final">الامتحان النهائي فقط (50)</option>
+                                    <option value="t1">الفصل الأول /100</option>
+                                    <option value="midyear">نصف السنة /100</option>
+                                    <option value="t2">الفصل الثاني /100</option>
+                                    <option value="saai">السعي السنوي /100</option>
+                                    <option value="final">الامتحان النهائي /100</option>
+                                    <option value="result">النتيجة النهائية /100</option>
                                 </select>
                             </div>
                             <div>
@@ -3230,12 +3112,13 @@
                                 <tr>
                                     <th class="p-1.5 text-center">#</th>
                                     <th class="p-1.5">الاسم</th>
-                                    <th class="p-1.5 text-center">فصل 1 (25)</th>
-                                    <th class="p-1.5 text-center">فصل 2 (25)</th>
-                                    <th class="p-1.5 text-center">السعي (50)</th>
-                                    <th class="p-1.5 text-center">الامتحان النهائي (50)</th>
-                                    <th class="p-1.5 text-center">المجموع (100)</th>
-                                    <th class="p-1.5 text-center">النتيجة</th>
+                                    <th class="p-1.5 text-center">الفصل الأول /100</th>
+                                    <th class="p-1.5 text-center">نصف السنة /100</th>
+                                    <th class="p-1.5 text-center">الفصل الثاني /100</th>
+                                    <th class="p-1.5 text-center">السعي السنوي /100</th>
+                                    <th class="p-1.5 text-center">النهائي /100</th>
+                                    <th class="p-1.5 text-center">النتيجة /100</th>
+                                    <th class="p-1.5 text-center">الحالة</th>
                                 </tr>
                             </thead>
                             <tbody id="grades-sec-report-body"></tbody>
@@ -3602,94 +3485,55 @@
 
         // 4. تقرير درجات الفصل المحدد
         function updateTermSpecificGradesReport() {
-            const termType = document.getElementById('rep-term-type').value;
-            const classFilterVal = document.getElementById('rep-term-class').value;
+            const typeEl = document.getElementById('rep-term-type');
+            const classEl = document.getElementById('rep-term-class');
+            const theadEl = document.getElementById('rep-term-thead');
+            const bodyEl = document.getElementById('term-grades-report-body');
+            if (!typeEl || !classEl || !theadEl || !bodyEl) return;
+            const termType = typeEl.value;
+            const classFilterVal = classEl.value;
             const searchKey = getSearchKeyword();
-
             setPrintHeaderStageLabelUnified('rep-term-stage', classFilterVal);
 
-            let theadEl = document.getElementById('rep-term-thead');
-            if (termType === 't1') {
-                theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">امتحان (20)</th><th class="p-2 text-center">تقييم (5)</th><th class="p-2 text-center">المجموع</th></tr>`;
-            } else if (termType === 't2') {
-                theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">امتحان (20)</th><th class="p-2 text-center">تقييم (5)</th><th class="p-2 text-center">المجموع</th></tr>`;
-            } else if (termType === 'saai') {
-                theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">فصل أول</th><th class="p-2 text-center">فصل ثاني</th><th class="p-2 text-center">درجة السعي</th></tr>`;
-            } else if (termType === 'final') {
-                theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">السعي</th><th class="p-2 text-center">النهائي</th><th class="p-2 text-center">المجموع</th></tr>`;
-            }
+            const t1Count = Number(appState.gradeSettings.term1MonthsCount) === 2 ? 2 : 3;
+            const t2Count = Number(appState.gradeSettings.term2MonthsCount) === 2 ? 2 : 3;
+            const monthLabels = ['الشهر الأول','الشهر الثاني','الشهر الثالث'];
+            const heads = {
+                t1: [...monthLabels.slice(0, t1Count), 'درجة الفصل الأول /100'],
+                midyear: ['تفصيل نصف السنة','درجة نصف السنة /100'],
+                t2: [...monthLabels.slice(0, t2Count), 'درجة الفصل الثاني /100'],
+                saai: ['الفصل الأول','نصف السنة','الفصل الثاني','السعي السنوي /100'],
+                final: ['السعي السنوي','الامتحان النهائي /100'],
+                result: ['السعي السنوي','الامتحان النهائي','النتيجة /100']
+            };
+            const columns = heads[termType] || heads.result;
+            theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${columns.map(h => `<th class="p-2 text-center">${h}</th>`).join('')}</tr>`;
 
             let filtered = [...appState.students];
             if (classFilterVal !== 'all') {
                 const [cName, sSec, sStudy] = classFilterVal.split(' - ');
-                filtered = filtered.filter(s => 
-                    s.class.trim() === cName.trim() && 
-                    s.section.trim() === sSec.trim() && 
-                    (s.studyType || 'صباحي').trim() === sStudy.trim()
-                );
+                filtered = filtered.filter(st => (st.class || '').trim() === (cName || '').trim() && (st.section || '').trim() === (sSec || '').trim() && (st.studyType || 'صباحي').trim() === (sStudy || 'صباحي').trim());
             }
-
-            if (searchKey) {
-                filtered = filtered.filter(s => s.name.toLowerCase().includes(searchKey));
-            }
-
+            if (searchKey) filtered = filtered.filter(st => (st.name || '').toLowerCase().includes(searchKey));
             filtered = filterStudentsForReportSubject(filtered);
             filtered = sortStudentsAlphabetically(filtered);
 
-            let rows = filtered.map((s, i) => {
-                let t1Sum = (s.t1Exam||0) + (s.t1Eval||0);
-                let t2Sum = (s.t2Exam||0) + (s.t2Eval||0);
-                let saai = t1Sum + t2Sum;
-                let final = s.final || 0;
-                let total = saai + final;
-
-                if (termType === 't1') {
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 text-center font-bold">${i+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center">${s.t1Exam||0}</td>
-                            <td class="p-2 text-center">${s.t1Eval||0}</td>
-                            <td class="p-2 text-center font-black text-indigo-700 text-sm">${t1Sum}</td>
-                        </tr>
-                    `;
-                } else if (termType === 't2') {
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 text-center font-bold">${i+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center">${s.t2Exam||0}</td>
-                            <td class="p-2 text-center">${s.t2Eval||0}</td>
-                            <td class="p-2 text-center font-black text-sky-700 text-sm">${t2Sum}</td>
-                        </tr>
-                    `;
-                } else if (termType === 'saai') {
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 text-center font-bold">${i+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center font-semibold text-indigo-700">${t1Sum}</td>
-                            <td class="p-2 text-center font-semibold text-sky-700">${t2Sum}</td>
-                            <td class="p-2 text-center font-black text-amber-600 text-sm">${saai}</td>
-                        </tr>
-                    `;
-                } else if (termType === 'final') {
-                    return `
-                        <tr class="border-b border-slate-100 text-[11px]">
-                            <td class="p-2 text-center font-bold">${i+1}</td>
-                            <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                            <td class="p-2 text-center font-bold text-slate-700">${saai}</td>
-                            <td class="p-2 text-center font-black text-purple-700">${final}</td>
-                            <td class="p-2 text-center font-black ${total>=50?'text-emerald-700':'text-rose-700'} text-sm">${total}</td>
-                        </tr>
-                    `;
-                }
+            const rows = filtered.map((st, i) => {
+                const t1 = getTermGrade(st, 1), mid = getMidyearGrade(st), t2 = getTermGrade(st, 2);
+                const annual = getAnnualEffortGrade(st), final = numericGrade(st.final), result = getFinalResultGrade(st);
+                let values = [];
+                if (termType === 't1') values = [...[st.term1Month1, st.term1Month2, st.term1Month3].slice(0, t1Count), t1];
+                else if (termType === 'midyear') values = [appState.gradeSettings.midyearMode === 'split' ? `تحريري ${formatGrade(st.midyearWritten)} + شفهي ${formatGrade(st.midyearOral)}` : `درجة مباشرة ${formatGrade(st.midyearDirect)}`, mid];
+                else if (termType === 't2') values = [...[st.term2Month1, st.term2Month2, st.term2Month3].slice(0, t2Count), t2];
+                else if (termType === 'saai') values = [t1, mid, t2, annual];
+                else if (termType === 'final') values = [annual, final];
+                else values = [annual, final, result];
+                return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${i+1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(st.name || '')}</td>${values.map(value => `<td class="p-2 text-center font-semibold">${typeof value === 'number' ? formatGrade(value) : value}</td>`).join('')}</tr>`;
             }).join('');
-
-            document.getElementById('term-grades-report-body').innerHTML = rows || '<tr><td colspan="5" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة</td></tr>';
+            bodyEl.innerHTML = rows || `<tr><td colspan="${columns.length + 2}" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة</td></tr>`;
         }
 
-        // 5. تقرير المتابعة
+                // 5. تقرير المتابعة
         function updateBehaviorReport() {
             const classFilterVal = document.getElementById('rep-beh-class').value;
             const searchKey = getSearchKeyword();
@@ -3824,57 +3668,31 @@
 
         // 8. درجات الشعبة كاملة
         function updateGradesSectionReport() {
-            const classFilterVal = document.getElementById('rep-grd-class').value;
+            const classEl = document.getElementById('rep-grd-class');
+            const bodyEl = document.getElementById('grades-sec-report-body');
+            if (!classEl || !bodyEl) return;
+            const classFilterVal = classEl.value;
             const searchKey = getSearchKeyword();
-
             setPrintHeaderStageLabelUnified('rep-grd-stage', classFilterVal);
-            
+
             let filtered = [...appState.students];
             if (classFilterVal !== 'all') {
                 const [cName, sSec, sStudy] = classFilterVal.split(' - ');
-                filtered = filtered.filter(s => 
-                    s.class.trim() === cName.trim() && 
-                    s.section.trim() === sSec.trim() && 
-                    (s.studyType || 'صباحي').trim() === sStudy.trim()
-                );
+                filtered = filtered.filter(st => (st.class || '').trim() === (cName || '').trim() && (st.section || '').trim() === (sSec || '').trim() && (st.studyType || 'صباحي').trim() === (sStudy || 'صباحي').trim());
             }
-
-            if (searchKey) {
-                filtered = filtered.filter(s => s.name.toLowerCase().includes(searchKey));
-            }
-
+            if (searchKey) filtered = filtered.filter(st => (st.name || '').toLowerCase().includes(searchKey));
             filtered = filterStudentsForReportSubject(filtered);
             filtered = sortStudentsAlphabetically(filtered);
-            
-            let rows = filtered.map((s, i) => {
-                let t1Sum = (s.t1Exam||0) + (s.t1Eval||0);
-                let t2Sum = (s.t2Exam||0) + (s.t2Eval||0);
-                let saai = t1Sum + t2Sum;
-                let final = s.final || 0;
-                let total = saai + final;
-                let passed = total >= 50;
-                return `
-                    <tr class="border-b border-slate-100 text-[10px]">
-                        <td class="p-1.5 font-bold text-center">${i+1}</td>
-                        <td class="p-1.5 font-bold text-slate-800">${s.name}</td>
-                        <td class="p-1.5 text-center font-semibold text-indigo-700">${t1Sum}</td>
-                        <td class="p-1.5 text-center font-semibold text-sky-700">${t2Sum}</td>
-                        <td class="p-1.5 text-center font-semibold text-amber-700">${saai}</td>
-                        <td class="p-1.5 text-center font-semibold text-purple-700">${final}</td>
-                        <td class="p-1.5 text-center font-black ${passed ? 'text-emerald-700' : 'text-rose-700'} text-xs">${total}</td>
-                        <td class="p-1.5 text-center">
-                            <span class="px-2 py-0.5 rounded-full font-black text-[9px] ${passed ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">
-                                ${passed ? 'ناجح' : 'راسب'}
-                            </span>
-                        </td>
-                    </tr>
-                `;
+
+            const rows = filtered.map((st, i) => {
+                const t1 = getTermGrade(st, 1), mid = getMidyearGrade(st), t2 = getTermGrade(st, 2);
+                const annual = getAnnualEffortGrade(st), final = numericGrade(st.final), result = getFinalResultGrade(st), passed = result >= 50;
+                return `<tr class="border-b border-slate-100 text-[10px]"><td class="p-1.5 font-bold text-center">${i+1}</td><td class="p-1.5 font-bold text-slate-800">${escapeHtml(st.name || '')}</td><td class="p-1.5 text-center text-indigo-700">${formatGrade(t1)}</td><td class="p-1.5 text-center text-amber-700">${formatGrade(mid)}</td><td class="p-1.5 text-center text-sky-700">${formatGrade(t2)}</td><td class="p-1.5 text-center text-amber-700 font-bold">${formatGrade(annual)}</td><td class="p-1.5 text-center text-purple-700">${formatGrade(final)}</td><td class="p-1.5 text-center font-black ${passed ? 'text-emerald-700' : 'text-rose-700'} text-xs">${formatGrade(result)}</td><td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded-full font-black text-[9px] ${passed ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">${passed ? 'ناجح' : 'راسب'}</span></td></tr>`;
             }).join('');
-            
-            document.getElementById('grades-sec-report-body').innerHTML = rows || '<tr><td colspan="8" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة لتقرير الدرجات</td></tr>';
+            bodyEl.innerHTML = rows || '<tr><td colspan="9" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة في التقرير</td></tr>';
         }
 
-        // تقرير أعلى وأدنى الدرجات حسب المادة والصف/الشعبة.
+                // تقرير أعلى وأدنى الدرجات حسب المادة والصف/الشعبة.
         function updateGradesMinMaxReport() {
             const classEl = document.getElementById('rep-minmax-class');
             const tbody = document.getElementById('grades-minmax-report-body');
@@ -3898,89 +3716,63 @@
 
             const totals = filtered.map(student => ({
                 student,
-                t1: (Number(student.t1Exam) || 0) + (Number(student.t1Eval) || 0),
-                t2: (Number(student.t2Exam) || 0) + (Number(student.t2Eval) || 0),
-                saai: (Number(student.t1Exam) || 0) + (Number(student.t1Eval) || 0) + (Number(student.t2Exam) || 0) + (Number(student.t2Eval) || 0),
-                total: (Number(student.t1Exam) || 0) + (Number(student.t1Eval) || 0) + (Number(student.t2Exam) || 0) + (Number(student.t2Eval) || 0) + (Number(student.final) || 0)
+                t1: getTermGrade(student, 1),
+                midyear: getMidyearGrade(student),
+                t2: getTermGrade(student, 2),
+                annual: getAnnualEffortGrade(student),
+                final: numericGrade(student.final),
+                total: getFinalResultGrade(student)
             })).sort((a, b) => b.total - a.total || String(a.student.name || '').localeCompare(String(b.student.name || ''), 'ar'));
 
             const highest = totals[0];
             const lowest = totals.length ? totals[totals.length - 1] : null;
             summary.innerHTML = totals.length ? `
                 <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
-                    <p class="text-[10px] font-bold text-emerald-700">أعلى درجة</p>
-                    <p class="text-xs font-black text-emerald-900 mt-1">${highest.student.name}</p>
-                    <p class="text-sm font-black text-emerald-700">${highest.total} / 100</p>
+                    <p class="text-[10px] font-bold text-emerald-700">أعلى نتيجة نهائية</p>
+                    <p class="text-xs font-black text-emerald-900 mt-1">${escapeHtml(highest.student.name || '')}</p>
+                    <p class="text-sm font-black text-emerald-700 mt-1">${formatGrade(highest.total)} / 100</p>
                 </div>
                 <div class="p-3 rounded-2xl bg-rose-50 border border-rose-200">
-                    <p class="text-[10px] font-bold text-rose-700">أدنى درجة</p>
-                    <p class="text-xs font-black text-rose-900 mt-1">${lowest.student.name}</p>
-                    <p class="text-sm font-black text-rose-700">${lowest.total} / 100</p>
+                    <p class="text-[10px] font-bold text-rose-700">أدنى نتيجة نهائية</p>
+                    <p class="text-xs font-black text-rose-900 mt-1">${escapeHtml(lowest.student.name || '')}</p>
+                    <p class="text-sm font-black text-rose-700 mt-1">${formatGrade(lowest.total)} / 100</p>
                 </div>
             ` : `<div class="col-span-2 text-center p-3 rounded-2xl bg-slate-50 text-xs text-slate-500">لا توجد بيانات مطابقة للفلاتر</div>`;
 
             tbody.innerHTML = totals.map((item, index) => `
                 <tr class="border-b border-slate-100 text-[10px]">
                     <td class="p-2 text-center font-bold">${index + 1}</td>
-                    <td class="p-2 font-bold text-slate-800">${item.student.name}</td>
-                    <td class="p-2">${item.student.class || ''} - ${item.student.section || ''}</td>
-                    <td class="p-2">${item.student.subject || (getSelectedReportSubject() === 'all' ? 'غير محددة' : getSelectedReportSubject())}</td>
-                    <td class="p-2 text-center font-black ${index === 0 ? 'text-emerald-700' : index === totals.length - 1 ? 'text-rose-700' : 'text-slate-800'}">${item.total}</td>
+                    <td class="p-2 font-bold text-slate-800">${escapeHtml(item.student.name || '')}</td>
+                    <td class="p-2">${escapeHtml(item.student.class || '')} - ${escapeHtml(item.student.section || '')}</td>
+                    <td class="p-2">${escapeHtml(item.student.subject || (getSelectedReportSubject() === 'all' ? 'غير محددة' : getSelectedReportSubject()))}</td>
+                    <td class="p-2 text-center font-black ${index === 0 ? 'text-emerald-700' : index === totals.length - 1 ? 'text-rose-700' : 'text-slate-800'}">${formatGrade(item.total)}</td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="p-3 text-center text-xs text-slate-400">لا توجد درجات مطابقة</td></tr>';
         }
 
-        // 10. الطلبة الناجحون
+                // 10. الطلبة الناجحون
         function updatePassedReport() {
             setPrintHeaderStageLabelUnified('rep-passed-dummy', 'all');
             const searchKey = getSearchKeyword();
-            let passed = appState.students.filter(s => {
-                let tot = ((s.t1Exam||0)+(s.t1Eval||0)+(s.t2Exam||0)+(s.t2Eval||0)+(s.final||0));
-                return tot >= 50 && (!searchKey || s.name.toLowerCase().includes(searchKey));
-            });
+            let passed = appState.students.filter(st => getFinalResultGrade(st) >= 50 && (!searchKey || String(st.name || '').toLowerCase().includes(searchKey)));
             passed = filterStudentsForReportSubject(passed);
             passed = sortStudentsAlphabetically(passed);
-
-            let rows = passed.map((s, i) => {
-                let total = (s.t1Exam||0)+(s.t1Eval||0)+(s.t2Exam||0)+(s.t2Eval||0)+(s.final||0);
-                return `
-                    <tr class="border-b border-slate-100 text-[11px]">
-                        <td class="p-2 font-bold text-center">${i+1}</td>
-                        <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                        <td class="p-2 text-center font-black text-emerald-700 text-xs">${total}</td>
-                        <td class="p-2 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">ناجح ✓</span></td>
-                    </tr>
-                `;
-            }).join('');
-            document.getElementById('grades-passed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة</td></tr>';
+            const rows = passed.map((st, i) => `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 font-bold text-center">${i+1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(st.name || '')}</td><td class="p-2 text-center font-black text-emerald-700 text-xs">${formatGrade(getFinalResultGrade(st))}</td><td class="p-2 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">ناجح ✓</span></td></tr>`).join('');
+            document.getElementById('grades-passed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة ناجحون</td></tr>';
         }
 
-        // 10. الطلبة الراسبون
+                // 10. الطلبة الراسبون
         function updateFailedReport() {
             setPrintHeaderStageLabelUnified('rep-failed-dummy', 'all');
             const searchKey = getSearchKeyword();
-            let failed = appState.students.filter(s => {
-                let tot = ((s.t1Exam||0)+(s.t1Eval||0)+(s.t2Exam||0)+(s.t2Eval||0)+(s.final||0));
-                return tot < 50 && (!searchKey || s.name.toLowerCase().includes(searchKey));
-            });
+            let failed = appState.students.filter(st => getFinalResultGrade(st) < 50 && (!searchKey || String(st.name || '').toLowerCase().includes(searchKey)));
             failed = filterStudentsForReportSubject(failed);
             failed = sortStudentsAlphabetically(failed);
-
-            let rows = failed.map((s, i) => {
-                let total = (s.t1Exam||0)+(s.t1Eval||0)+(s.t2Exam||0)+(s.t2Eval||0)+(s.final||0);
-                return `
-                    <tr class="border-b border-slate-100 text-[11px]">
-                        <td class="p-2 font-bold text-center">${i+1}</td>
-                        <td class="p-2 font-bold text-slate-800">${s.name}</td>
-                        <td class="p-2 text-center font-black text-rose-700 text-xs">${total}</td>
-                        <td class="p-2 text-center"><span class="px-2 py-0.5 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">راسب ✗</span></td>
-                    </tr>
-                `;
-            }).join('');
-            document.getElementById('grades-failed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة راسبين</td></tr>';
+            const rows = failed.map((st, i) => `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 font-bold text-center">${i+1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(st.name || '')}</td><td class="p-2 text-center font-black text-rose-700 text-xs">${formatGrade(getFinalResultGrade(st))}</td><td class="p-2 text-center"><span class="px-2 py-0.5 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">راسب ✗</span></td></tr>`).join('');
+            document.getElementById('grades-failed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة راسبون</td></tr>';
         }
 
-        // إحصائيات التقارير: الأولوية لجلسات الحضور المحفوظة، مع دعم سجلات الطلبة القديمة.
+                // إحصائيات التقارير: الأولوية لجلسات الحضور المحفوظة، مع دعم سجلات الطلبة القديمة.
         function getStudentAbsenceMetrics(student, subjectName = 'all', classFilterVal = 'all', fromDate = '', toDate = '') {
             const pickedSubject = subjectName || 'all';
             const sessionMetrics = getReportSessionMetrics(student, pickedSubject, classFilterVal, fromDate, toDate);
