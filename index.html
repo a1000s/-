@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>برنامج إدارة المدارس الذكي Pro | إدارة الصفوف والتقارير</title>
+    <title>منظومة المدرس الذكي Pro | إدارة الصفوف والتقارير المدرسية</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts (Cairo) -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Google Identity Services (OAuth token flow, loaded on demand by the app) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -39,17 +36,6 @@
         body {
             font-family: 'Cairo', sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        }
-        .bottom-dock {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 50% !important;
-            right: auto !important;
-            transform: translateX(-50%) !important;
-            width: min(100vw, 430px) !important;
-        }
-        @media (min-width: 640px) {
-            .bottom-dock { width: 414px !important; }
         }
         .no-scrollbar::-webkit-scrollbar {
             display: none;
@@ -232,13 +218,13 @@
                     </div>
                     <div>
                         <span class="text-[10px] font-bold tracking-wider uppercase text-amber-400/90 block">وزارة التربية</span>
-                        <h2 class="text-xs font-bold text-slate-200 truncate max-w-[160px]" id="school-header-title">مدرسة بغداد</h2>
+                        <h2 class="text-xs font-bold text-slate-200 truncate max-w-[160px]" id="school-header-title">مدرسة النموذجية</h2>
                     </div>
                 </div>
 
-                <div id="local-save-status-badge" class="text-[10px] bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-300 font-bold backdrop-blur-md flex items-center gap-1.5 shadow-sm transition-all duration-300">
-                    <span id="local-save-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span id="local-save-status-text">الحفظ المحلي مفعّل</span>
+                <div id="local-status-badge" class="text-[10px] bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-300 font-bold backdrop-blur-md flex items-center gap-1.5 shadow-sm transition-all duration-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>جارٍ الاتصال بالسحابة...</span>
                 </div>
             </div>
 
@@ -247,7 +233,7 @@
                     الصفوف والطلبة
                 </h1>
                 <p id="header-subtitle" class="text-[11px] text-slate-300/90 mt-1 leading-relaxed font-medium">
-                    إدارة قيود الطلبة، الصفوف الدراسية، والتقارير المدرسية الشاملة
+                    إدارة الطلبة والصفوف والتقارير المدرسية الشاملة
                 </p>
             </div>
 
@@ -272,10 +258,8 @@
             <!-- Dynamic Content Injected Here -->
         </div>
 
-    </div>
-
         <!-- Bottom Navigation Dock (7 Tabs) -->
-        <div class="bottom-dock fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 backdrop-blur-md border-t border-slate-200 px-0.5 py-2 flex justify-around items-center z-40 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] flex-shrink-0" style="padding-bottom:calc(0.5rem + env(safe-area-inset-bottom));">
+        <div class="bottom-dock absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-0.5 py-2 flex justify-around items-center z-30 shadow-[0_-8px_25px_rgba(0,0,0,0.08)] flex-shrink-0">
             <button onclick="switchTab(0)" id="tab-0" class="flex flex-col items-center flex-1 py-1 transition-all group">
                 <div class="tab-icon-box w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center transition-all duration-300">
                     <i class="fa-solid fa-gear text-xs sm:text-sm"></i>
@@ -325,6 +309,7 @@
                 <span class="text-[8px] sm:text-[9px] font-bold mt-0.5 truncate w-full text-center transition-colors">التقارير</span>
             </button>
         </div>
+    </div>
 
     <!-- Action Modal -->
     <div id="action-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-3">
@@ -368,21 +353,15 @@
     </div>
 
     <script>
-        // --- Central School Management State ---
+        // --- Central Database State ---
         let appState = {
-            googleConfig: {
-                clientId: "",
-                connected: false,
-                fileId: ""
-            },
-            supabaseConfig: { url: "https://qrxkcbqnojotojddommo.supabase.co", key: "sb_publishable_OC2bbCwGYtdfSLtbX12XOw_sUEicpM3" },
             schoolInfo: {
-                name: "مدرسة بغداد",
-                university: "مديرية تربية بغداد",
-                college: "مدرسة بغداد",
-                department: "الإدارة المدرسية",
-                teacher: "أ. أحمد محمد",
-                subject: "الرياضيات",
+                name: "مدرسة النموذجية",
+                university: "",
+                college: "",
+                department: "الإدارة",
+                teacher: "المدرس",
+                subject: "البرمجيات وتراكيب البيانات",
                 year: "2025 - 2026",
                 logo: ""
             },
@@ -400,7 +379,7 @@
                     section: "أ", 
                     studyType: "صباحي",
                     year: "2025-2026", 
-                    subject: "الرياضيات", 
+                    subject: "البرمجيات", 
                     behavior: "مميز", 
                     note: "طالب مواظب وذكي", 
                     t1Exam: 18, t1Eval: 4,
@@ -411,8 +390,8 @@
                     excusedCount: 0,
                     absenceLog: [{ date: "2026-09-15", day: "الثلاثاء", status: "غائب" }],
                     behaviorLog: [
-                        { mark: "مميز", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "الرياضيات", date: "2026-09-20" },
-                        { mark: "مميز", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "الرياضيات", date: "2026-09-27" }
+                        { mark: "مميز", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "برمجة الحاسوب I", date: "2026-09-20" },
+                        { mark: "مميز", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "البرمجيات", date: "2026-09-27" }
                     ]
                 },
                 { 
@@ -422,7 +401,7 @@
                     section: "أ", 
                     studyType: "صباحي",
                     year: "2025-2026", 
-                    subject: "الرياضيات", 
+                    subject: "البرمجيات", 
                     behavior: "متوسط", 
                     note: "يحتاج متابعة التقارير", 
                     t1Exam: 12, t1Eval: 3,
@@ -437,7 +416,7 @@
                         { date: "2026-09-24", day: "الخميس", status: "مجاز" },
                         { date: "2026-10-01", day: "الخميس", status: "غائب" }
                     ],
-                    behaviorLog: [{ mark: "متوسط", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "الرياضيات", date: "2026-09-15" }]
+                    behaviorLog: [{ mark: "متوسط", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "البرمجيات", date: "2026-09-15" }]
                 },
                 { 
                     id: 3, 
@@ -446,7 +425,7 @@
                     section: "أ", 
                     studyType: "صباحي",
                     year: "2025-2026", 
-                    subject: "الرياضيات", 
+                    subject: "البرمجيات", 
                     behavior: "مميز", 
                     note: "متفوقة في العملي", 
                     t1Exam: 20, t1Eval: 5,
@@ -456,7 +435,7 @@
                     absenceCount: 0,
                     excusedCount: 0,
                     absenceLog: [],
-                    behaviorLog: [{ mark: "مميز", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "الرياضيات", date: "2026-09-22" }]
+                    behaviorLog: [{ mark: "مميز", stage: "الصف الأول", section: "أ", studyType: "صباحي", subject: "البرمجيات", date: "2026-09-22" }]
                 },
                 { 
                     id: 4, 
@@ -465,7 +444,7 @@
                     section: "ب", 
                     studyType: "صباحي",
                     year: "2025-2026", 
-                    subject: "العلوم", 
+                    subject: "تراكيب البيانات", 
                     behavior: "سيء", 
                     note: "كثير الغياب - إنذار أول", 
                     t1Exam: 8, t1Eval: 2,
@@ -480,7 +459,7 @@
                         { date: "2026-09-22", day: "الثلاثاء", status: "مجاز" },
                         { date: "2026-09-29", day: "الثلاثاء", status: "غائب" }
                     ],
-                    behaviorLog: [{ mark: "سيء", stage: "الصف الأول", section: "ب", studyType: "صباحي", subject: "العلوم", date: "2026-09-18" }]
+                    behaviorLog: [{ mark: "سيء", stage: "الصف الأول", section: "ب", studyType: "صباحي", subject: "تراكيب البيانات", date: "2026-09-18" }]
                 },
                 { 
                     id: 5, 
@@ -489,7 +468,7 @@
                     section: "أ", 
                     studyType: "صباحي",
                     year: "2025-2026", 
-                    subject: "العلوم", 
+                    subject: "تراكيب البيانات", 
                     behavior: "مميز", 
                     note: "تشارك باستمرار", 
                     t1Exam: 17, t1Eval: 5,
@@ -499,7 +478,7 @@
                     absenceCount: 1,
                     excusedCount: 0,
                     absenceLog: [{ date: "2026-09-14", day: "الإثنين", status: "غائب" }],
-                    behaviorLog: [{ mark: "مميز", stage: "الصف الثاني", section: "أ", studyType: "صباحي", subject: "العلوم", date: "2026-09-25" }]
+                    behaviorLog: [{ mark: "مميز", stage: "الصف الثاني", section: "أ", studyType: "صباحي", subject: "تراكيب البيانات", date: "2026-09-25" }]
                 },
                 { 
                     id: 6, 
@@ -508,7 +487,7 @@
                     section: "أ", 
                     studyType: "مسائي",
                     year: "2025-2026", 
-                    subject: "الرياضيات", 
+                    subject: "البرمجيات", 
                     behavior: "متوسط", 
                     note: "تجاوز نسبة الغياب", 
                     t1Exam: 5, t1Eval: 1,
@@ -524,22 +503,19 @@
                         { date: "2026-09-22", day: "الثلاثاء", status: "غائب" },
                         { date: "2026-09-29", day: "الثلاثاء", status: "غائب" }
                     ],
-                    behaviorLog: [{ mark: "متوسط", stage: "الصف الثالث", section: "أ", studyType: "مسائي", subject: "الرياضيات", date: "2026-09-12" }]
+                    behaviorLog: [{ mark: "متوسط", stage: "الصف الثالث", section: "أ", studyType: "مسائي", subject: "البرمجيات", date: "2026-09-12" }]
                 }
             ],
-            // إعدادات سجل الدرجات المدرسي (تُحفظ مع بيانات المدرسة)
-            gradeSettings: { term1MonthsCount: 3, term2MonthsCount: 3, midyearMode: 'direct' },
-            gradeSchemaVersion: 1,
             subjectCatalog: [],
             subjects: [
-                { id: 1, name: "الرياضيات", class: "الصف الأول", teacher: "أ. أحمد محمد" },
-                { id: 2, name: "العلوم", class: "الصف الثاني", teacher: "أ. أحمد محمد" },
-                { id: 3, name: "اللغة العربية", class: "الصف الأول", teacher: "أ. سارة علي" }
+                { id: 1, name: "برمجة الحاسوب I", class: "الصف الأول", teacher: "أ.د. حيدر الموسوي" },
+                { id: 2, name: "تراكيب البيانات", class: "الصف الثاني", teacher: "أ.د. حيدر الموسوي" },
+                { id: 3, name: "الرياضيات الهندسية", class: "الصف الأول", teacher: "د. أحمد علي" }
             ],
             schedule: [
-                { id: 1, day: "الأحد", subject: "الرياضيات", className: "الصف الأول (أ - صباحي)", time: "08:30 - 10:30", hall: "قاعة الصف الأول" },
-                { id: 2, day: "الأحد", subject: "العلوم", className: "الصف الثاني (أ - صباحي)", time: "10:30 - 12:30", hall: "مختبر العلوم" },
-                { id: 3, day: "الإثنين", subject: "الرياضيات", className: "الصف الأول (ب - صباحي)", time: "08:30 - 10:30", hall: "قاعة الصف الأول - شعبة ب" }
+                { id: 1, day: "الأحد", subject: "برمجة الحاسوب I", className: "الصف الأول (أ - صباحي)", time: "08:30 - 10:30", hall: "قاعة الخوارزمي" },
+                { id: 2, day: "الأحد", subject: "تراكيب البيانات", className: "الصف الثاني (أ - صباحي)", time: "10:30 - 12:30", hall: "مختبر البرمجيات 2" },
+                { id: 3, day: "الإثنين", subject: "برمجة الحاسوب I", className: "الصف الأول (ب - صباحي)", time: "08:30 - 10:30", hall: "قاعة البيروني" }
             ],
             attendanceRecord: {},
             savedSessions: [
@@ -549,7 +525,7 @@
                     className: "الصف الأول",
                     section: "أ",
                     studyType: "صباحي",
-                    subject: "الرياضيات",
+                    subject: "برمجة الحاسوب I",
                     records: {
                         1: "present",
                         2: "absent",
@@ -564,137 +540,68 @@
         let currentModalType = "";
         let currentAttendanceMap = {};
         let currentLoadedAttendanceStudents = [];
-        let googleAccessToken = null;
-        let googleTokenClient = null;
-        let googleSyncTimeout = null;
-        let googleSyncInProgress = false;
-        let googleSyncPending = false;
-        const GOOGLE_DRIVE_BACKUP_NAME = 'academic_state.json';
 
         function normalizeAppState() {
             if (!appState || typeof appState !== 'object') return;
-            Object.keys(appState).filter(key => /config/i.test(key) && !['googleConfig', 'supabaseConfig'].includes(key)).forEach(key => delete appState[key]);
-            appState.googleConfig = { clientId: "", connected: false, fileId: "", ...(appState.googleConfig || {}) };
-            appState.supabaseConfig = { url: "https://qrxkcbqnojotojddommo.supabase.co", key: "sb_publishable_OC2bbCwGYtdfSLtbX12XOw_sUEicpM3", ...(appState.supabaseConfig || {}) };
+            delete appState.supabaseConfig;
+            delete appState.googleConfig;
             appState.schoolInfo = {
-                name: "مدرسة بغداد",
-                university: "مديرية تربية بغداد",
-                college: "مدرسة بغداد",
-                department: "الإدارة المدرسية",
-                teacher: "المعلم",
-                subject: "",
-                year: "",
-                logo: "",
-                ...(appState.schoolInfo || {})
+                name: "مدرسة النموذجية", university: "", college: "", department: "الإدارة",
+                teacher: "المدرس", subject: "", year: "", logo: "", ...(appState.schoolInfo || {})
             };
+            const convertSchoolTerm = value => String(value == null ? "" : value)
+                .replace(/جامعة بغداد\s*-\s*كلية الهندسة/g, "مدرسة النموذجية")
+                .replace(/جامعة بغداد/g, "المدرسة").replace(/كلية/g, "المدرسة")
+                .replace(/المرحلة الأولى/g, "الصف الأول").replace(/المرحلة الثانية/g, "الصف الثاني")
+                .replace(/المرحلة الثالثة/g, "الصف الثالث").replace(/المرحلة الرابعة/g, "الصف الرابع")
+                .replace(/المرحلة الخامسة/g, "الصف الخامس").replace(/المرحلة السادسة/g, "الصف السادس")
+                .replace(/المرحلة/g, "الصف").replace(/المدرس|الأستاذ/g, "المدرس");
+            appState.schoolInfo.name = convertSchoolTerm(appState.schoolInfo.name || "مدرسة النموذجية");
+            appState.schoolInfo.teacher = convertSchoolTerm(appState.schoolInfo.teacher || "المدرس");
+            appState.schoolInfo.university = "";
+            appState.schoolInfo.college = "";
             appState.classes = Array.isArray(appState.classes) ? appState.classes : [];
             appState.students = Array.isArray(appState.students) ? appState.students : [];
             appState.subjects = Array.isArray(appState.subjects) ? appState.subjects : [];
+            appState.subjectCatalog = Array.isArray(appState.subjectCatalog) ? appState.subjectCatalog : [];
             appState.schedule = Array.isArray(appState.schedule) ? appState.schedule : [];
             appState.savedSessions = Array.isArray(appState.savedSessions) ? appState.savedSessions : [];
-
-            appState.gradeSettings = {
-                term1MonthsCount: 3,
-                term2MonthsCount: 3,
-                midyearMode: 'direct',
-                ...(appState.gradeSettings || {})
-            };
-
-            // ترحيل درجات النموذج القديم إلى درجات شهرية من 100 مرة واحدة، مع إبقاء بيانات الطالب وخصائصه الأخرى كما هي.
-            if (Number(appState.gradeSchemaVersion || 1) < 2) {
-                appState.students.forEach(student => {
-                    if (!student || typeof student !== 'object') return;
-                    const newGradeKeys = ['term1Month1','term1Month2','term1Month3','term2Month1','term2Month2','term2Month3','midyearDirect','midyearWritten','midyearOral'];
-                    const hasNewGradeModel = newGradeKeys.some(key => Object.prototype.hasOwnProperty.call(student, key));
-                    const hasLegacyTermMarks = ['t1Exam','t1Eval','t2Exam','t2Eval'].some(key => Object.prototype.hasOwnProperty.call(student, key));
-                    if (!hasNewGradeModel && hasLegacyTermMarks) {
-                        const oldTerm1 = Math.max(0, Math.min(25, (Number(student.t1Exam) || 0) + (Number(student.t1Eval) || 0)));
-                        const oldTerm2 = Math.max(0, Math.min(25, (Number(student.t2Exam) || 0) + (Number(student.t2Eval) || 0)));
-                        const term1Percent = Math.round((oldTerm1 / 25 * 100) * 100) / 100;
-                        const term2Percent = Math.round((oldTerm2 / 25 * 100) * 100) / 100;
-                        [1, 2, 3].forEach(month => {
-                            student[`term1Month${month}`] = term1Percent;
-                            student[`term2Month${month}`] = term2Percent;
-                        });
-                        // درجة نصف السنة لم تكن موجودة في النموذج السابق؛ تُترك صفراً كي تُدخل من تبويبها الجديد.
-                        student.midyearDirect = 0;
-                        student.midyearWritten = 0;
-                        student.midyearOral = 0;
-                        if (student.final !== undefined && student.final !== null) {
-                            student.final = Math.max(0, Math.min(100, (Number(student.final) || 0) * 2));
-                        }
-                    }
-                });
-                appState.gradeSchemaVersion = 2;
-            }
+            appState.attendanceRecord = appState.attendanceRecord && typeof appState.attendanceRecord === 'object' ? appState.attendanceRecord : {};
+            appState.classes.forEach(cls => { cls.name = convertSchoolTerm(cls.name); });
             appState.students.forEach(student => {
-                if (!student || typeof student !== 'object') return;
-                ['term1Month1','term1Month2','term1Month3','term2Month1','term2Month2','term2Month3','midyearDirect','midyearWritten','midyearOral','final'].forEach(key => {
-                    if (student[key] === undefined || student[key] === null || student[key] === '') student[key] = 0;
-                });
+                student.class = convertSchoolTerm(student.class);
+                student.subject = student.subject == null ? "" : String(student.subject);
+                student.whatsapp = String(student.whatsapp || "");
+                student.gradesBySubject = student.gradesBySubject && typeof student.gradesBySubject === 'object' ? student.gradesBySubject : {};
+                if (student.term1Month1 === undefined) {
+                    const oldTerm1 = (Number(student.t1Exam) || 0) + (Number(student.t1Eval) || 0);
+                    student.term1Month1 = oldTerm1 ? Math.min(100, oldTerm1 * 4) : "";
+                }
+                if (student.term1Month2 === undefined) student.term1Month2 = "";
+                if (student.term1Month3 === undefined) student.term1Month3 = "";
+                if (student.term2Month1 === undefined) {
+                    const oldTerm2 = (Number(student.t2Exam) || 0) + (Number(student.t2Eval) || 0);
+                    student.term2Month1 = oldTerm2 ? Math.min(100, oldTerm2 * 4) : "";
+                }
+                if (student.term2Month2 === undefined) student.term2Month2 = "";
+                if (student.term2Month3 === undefined) student.term2Month3 = "";
+                if (student.midyearMode === undefined) student.midyearMode = "direct";
+                if (student.midyearDirect === undefined) student.midyearDirect = "";
+                if (student.midyearWritten === undefined) student.midyearWritten = "";
+                if (student.midyearOral === undefined) student.midyearOral = "";
+                if (student.midyearMonth1 === undefined) student.midyearMonth1 = "";
+                if (student.midyearMonth2 === undefined) student.midyearMonth2 = "";
+                if (student.finalExam === undefined) student.finalExam = student.final ? Math.min(100, Number(student.final) * 2) : "";
+                delete student.t1Exam; delete student.t1Eval; delete student.t2Exam; delete student.t2Eval; delete student.final;
+                if (student.id !== undefined && student.id !== null) student.id = typeof student.id === 'string' && student.id.trim() !== '' ? (Number.isFinite(Number(student.id)) ? Number(student.id) : student.id) : student.id;
+                if (!Array.isArray(student.absenceLog)) student.absenceLog = [];
+                if (!Array.isArray(student.behaviorLog)) student.behaviorLog = [];
+                student.behaviorLog.forEach(log => { if (log && log.stage) log.stage = convertSchoolTerm(log.stage); });
             });
-
-            // Migrate saved data from the former college-oriented version.
-            const schoolText = value => {
-                let text = String(value == null ? '' : value);
-                const gradeNames = [
-                    ['المرحلة الأولى', 'الصف الأول'], ['المرحلة الثانية', 'الصف الثاني'],
-                    ['المرحلة الثالثة', 'الصف الثالث'], ['المرحلة الرابعة', 'الصف الرابع'],
-                    ['المرحلة الخامسة', 'الصف الخامس'], ['المرحلة السادسة', 'الصف السادس']
-                ];
-                gradeNames.forEach(([oldName, newName]) => { text = text.replaceAll(oldName, newName); });
-                text = text.replaceAll('المراحل', 'الصفوف').replaceAll('المرحلة', 'الصف').replaceAll('مراحل', 'صفوف');
-                return text;
-            };
-            const schoolSubject = value => {
-                let subject = String(value == null ? '' : value);
-                subject = subject.replaceAll('برمجة الحاسوب I', 'الرياضيات')
-                    .replaceAll('البرمجيات', 'الرياضيات')
-                    .replaceAll('تراكيب البيانات', 'العلوم')
-                    .replaceAll('الرياضيات الهندسية', 'اللغة العربية');
-                return subject;
-            };
-            appState.classes.forEach(item => { if (item && item.name) item.name = schoolText(item.name); });
-            appState.students.forEach(student => {
-                if (!student) return;
-                if (student.class) student.class = schoolText(student.class);
-                if (student.subject) student.subject = schoolSubject(student.subject);
-                if (Array.isArray(student.behaviorLog)) student.behaviorLog.forEach(log => {
-                    if (log && log.stage) log.stage = schoolText(log.stage);
-                    if (log && log.subject) log.subject = schoolSubject(log.subject);
-                });
-            });
-            appState.subjects.forEach(item => {
-                if (!item) return;
-                if (item.class) item.class = schoolText(item.class);
-                if (item.name) item.name = schoolSubject(item.name);
-            });
-            appState.schedule.forEach(item => {
-                if (!item) return;
-                if (item.className) item.className = schoolText(item.className);
-                if (item.subject) item.subject = schoolSubject(item.subject);
-                if (item.hall) item.hall = item.hall.replaceAll('قاعة الخوارزمي', 'قاعة الصف الأول').replaceAll('مختبر البرمجيات 2', 'مختبر العلوم').replaceAll('قاعة البيروني', 'قاعة الصف الأول - شعبة ب');
-            });
-            appState.savedSessions.forEach(item => {
-                if (!item) return;
-                if (item.className) item.className = schoolText(item.className);
-                if (item.subject) item.subject = schoolSubject(item.subject);
-            });
-            if (Array.isArray(appState.subjectCatalog)) appState.subjectCatalog.forEach(item => { if (item && item.name) item.name = schoolSubject(item.name); });
-            if (appState.schoolInfo) {
-                const info = appState.schoolInfo;
-                const legacyName = 'جامعة بغداد - كلية الهندسة';
-                if (info.name === legacyName || info.name === 'جامعة بغداد - مدرسة الهندسة') info.name = 'مدرسة بغداد';
-                if (info.name) info.name = info.name.replaceAll('جامعة بغداد', 'مدرسة بغداد').replaceAll('كلية الهندسة', 'مدرسة بغداد');
-                if (info.university === 'جامعة بغداد') info.university = 'مديرية تربية بغداد';
-                else if (info.university) info.university = info.university.replaceAll('جامعة', 'مديرية تربية');
-                if (info.college === 'كلية الهندسة') info.college = 'مدرسة بغداد';
-                else if (info.college) info.college = info.college.replaceAll('كلية', 'مدرسة');
-                if (info.department === 'قسم البرمجيات وتراكيب البيانات' || info.department === 'قسم الرياضيات والعلوم') info.department = 'الإدارة المدرسية';
-                if (info.subject === 'البرمجيات وتراكيب البيانات') info.subject = 'الرياضيات';
-                if (info.teacher === 'الأستاذ الجامعي' || info.teacher === 'الأستاذ المدرسي') info.teacher = 'المعلم';
-            }
-            // توحيد ربط المواد القديمة: إذا كانت المادة مرتبطة بالصف فقط، تُربط بكل شعبة/دراسة موجودة لهذا الصف، دون تكرار ربط موجود مسبقاً.
+            appState.subjects.forEach(subject => { if (subject) subject.class = convertSchoolTerm(subject.class); });
+            appState.schedule.forEach(item => { if (item) item.className = convertSchoolTerm(item.className); });
+            appState.savedSessions.forEach(session => { if (session) session.className = convertSchoolTerm(session.className); });
+            // توحيد ربط المواد القديمة: إذا كانت المادة مرتبطة بالصف فقط، تُربط بكل شعبة/دراسة موجودة لذلك الصف، دون تكرار ربط موجود مسبقاً.
             const sourceSubjects = appState.subjects.filter(subject => subject && typeof subject === 'object');
             const exactSubjectKeys = new Set(sourceSubjects.filter(subject => String(subject.section || '').trim()).map(subject =>
                 getSubjectAssignmentKey(subject.name, subject.class, subject.section, subject.studyType || 'صباحي')
@@ -749,12 +656,6 @@
                 });
             });
             appState.subjects = normalizedSubjects;
-            appState.schedule = Array.isArray(appState.schedule) ? appState.schedule : [];
-            appState.savedSessions = Array.isArray(appState.savedSessions) ? appState.savedSessions : [];
-            appState.students.forEach(student => {
-                if (student.id !== undefined && student.id !== null) student.id = typeof student.id === 'string' && student.id.trim() !== '' ? (Number.isFinite(Number(student.id)) ? Number(student.id) : student.id) : student.id;
-                if (!Array.isArray(student.absenceLog)) student.absenceLog = [];
-            });
 
             // ترحيل روابط المواد القديمة مرة واحدة فقط؛ حتى لا تعود مادة أزيل ربطها يدوياً بسبب وجود سجلات تاريخية.
             const shouldMigrateLegacySubjectLinks = Number(appState.subjectAssignmentSchemaVersion || 0) < 2;
@@ -797,7 +698,7 @@
                 appState.subjectAssignmentSchemaVersion = 2;
             }
 
-            // فهرس مستقل للمواد: سجل المادة هنا لا يحمل صفاً أو شعبة؛ الربط بالشعب محفوظ في appState.subjects.
+            // فهرس مستقل للمواد: سجل المادة هنا لا يحمل مرحلة أو شعبة؛ الربط بالشعب محفوظ في appState.subjects.
             const catalogSource = Array.isArray(appState.subjectCatalog) ? appState.subjectCatalog : [];
             const catalogMap = new Map();
             [...catalogSource, ...(appState.subjects || [])].forEach(item => {
@@ -1024,377 +925,206 @@
             return inp ? inp.value.trim().toLowerCase() : '';
         }
 
-        // --- Local persistence and optional Google Drive backup ---
-        function persistLocalState() {
-            try {
-                // Drop legacy configuration from previously saved versions.
-                if (appState && typeof appState === 'object') Object.keys(appState).filter(key => /config/i.test(key) && !['googleConfig', 'supabaseConfig'].includes(key)).forEach(key => delete appState[key]);
-                localStorage.setItem('sp_academic_local_data', JSON.stringify(appState));
-            } catch (storageError) {
-                console.warn('LocalStorage save error:', storageError);
-            }
-        }
+        // --- Supabase cloud sync + local fallback ---
+        // The publishable key is intended for browser use. Never put a Supabase secret/service-role key here.
+        const SUPABASE_URL = 'https://hkkjtoyiwezdzjrwzdlh.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_C9urMQ7Fkgw2FfLQZy-G6g_lVHy3gLm';
+        const SUPABASE_STATE_ENDPOINT = `${SUPABASE_URL}/rest/v1/app_state`;
+        const SUPABASE_STATE_ROW_ID = 1;
+        let supabaseSyncEnabled = false;
+        let supabaseSaveTimer = null;
+        let supabaseSaveInFlight = false;
+        let supabaseSaveQueued = false;
 
-        let supabaseClient = null;
-        let supabaseUser = null;
-        let supabaseSyncTimer = null;
-        let supabaseRealtimeChannel = null;
-        let applyingRemoteSupabaseState = false;
-        let supabaseWriteInProgress = false;
-
-        function setSupabaseStatus(message, good = false) {
-            const el = document.getElementById('supabase-status');
-            if (el) {
-                el.textContent = message;
-                el.className = `text-[10px] font-bold ${good ? 'text-emerald-700' : 'text-slate-600'}`;
-            }
-            const badge = document.getElementById('local-save-status-text');
-            if (badge) badge.textContent = supabaseUser ? 'الحفظ المحلي والسحابي' : 'الحفظ المحلي مفعّل';
-        }
-
-        async function connectSupabase() {
-            const urlInput = (document.getElementById('supabase-url-input')?.value || appState.supabaseConfig?.url || '').trim();
-            const url = urlInput.replace(/\/rest\/v1\/?$/i, '').replace(/\/$/, '');
-            const key = (document.getElementById('supabase-key-input')?.value || appState.supabaseConfig?.key || '').trim();
-            if (!url || !key) {
-                showToast('أدخل Project URL والمفتاح العام فقط', 'error'); return;
-            }
-            if (!/^https:\/\/[a-zA-Z0-9.-]+\.supabase\.co$/.test(url)) {
-                showToast('تحقق من Project URL في إعدادات Supabase', 'error'); return;
-            }
-            if (!window.supabase || !window.supabase.createClient) {
-                showToast('تعذر تحميل مكتبة Supabase؛ تحقق من الإنترنت', 'error'); return;
-            }
-            try {
-                appState.supabaseConfig = { url, key };
-                persistLocalState();
-                supabaseClient = window.supabase.createClient(url, key);
-                setSupabaseStatus('جارٍ الاتصال بحساب مجهول...');
-                const { data: sessionData } = await supabaseClient.auth.getSession();
-                let user = sessionData?.session?.user || null;
-                if (!user) {
-                    const { data, error } = await supabaseClient.auth.signInAnonymously();
-                    if (error) throw error;
-                    user = data.user;
-                }
-                supabaseUser = user;
-                await loadSupabaseState();
-                setSupabaseStatus('متصل — تفعيل المزامنة اللحظية…', true);
-                subscribeSupabaseRealtime();
-                showToast('تم الاتصال بـ Supabase واسترجاع البيانات');
-            } catch (error) {
-                console.error('Supabase connection error:', error);
-                setSupabaseStatus('فشل الاتصال: ' + (error.message || 'تحقق من الإعدادات'));
-                showToast('تعذر الاتصال بـ Supabase: ' + (error.message || ''), 'error');
-            }
-        }
-
-        async function loadSupabaseState() {
-            if (!supabaseClient || !supabaseUser) return;
-            const { data, error } = await supabaseClient.from('school_app_state')
-                .select('payload').eq('user_id', supabaseUser.id).maybeSingle();
-            if (error) throw error;
-            if (data && data.payload && Array.isArray(data.payload.students)) {
-                const config = appState.supabaseConfig;
-                appState = data.payload;
-                appState.supabaseConfig = config;
-                normalizeAppState();
-                persistLocalState();
-                updateStatsBar();
-                renderContent();
+        function setCloudStatus(mode, message) {
+            const badge = document.getElementById('local-status-badge');
+            if (!badge) return;
+            const dot = badge.querySelector('span:first-child');
+            const label = badge.querySelector('span:last-child');
+            if (label) label.textContent = message;
+            badge.title = message;
+            if (mode === 'connected') {
+                badge.className = 'text-[10px] bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full text-emerald-300 font-bold backdrop-blur-md flex items-center gap-1.5 shadow-sm transition-all duration-300';
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+            } else if (mode === 'connecting') {
+                badge.className = 'text-[10px] bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full text-amber-200 font-bold backdrop-blur-md flex items-center gap-1.5 shadow-sm transition-all duration-300';
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
             } else {
-                await writeSupabaseState();
+                badge.className = 'text-[10px] bg-rose-500/15 border border-rose-500/30 px-3 py-1 rounded-full text-rose-200 font-bold backdrop-blur-md flex items-center gap-1.5 shadow-sm transition-all duration-300';
+                if (dot) dot.className = 'w-2 h-2 rounded-full bg-rose-400';
             }
         }
 
-        function subscribeSupabaseRealtime() {
-            if (!supabaseClient || !supabaseUser) return;
-            if (supabaseRealtimeChannel) {
-                try { supabaseClient.removeChannel(supabaseRealtimeChannel); } catch (_) {}
-            }
-            supabaseRealtimeChannel = supabaseClient.channel('school-state-' + supabaseUser.id)
-                .on('postgres_changes', {
-                    event: '*', schema: 'public', table: 'school_app_state',
-                    filter: 'user_id=eq.' + supabaseUser.id
-                }, async (event) => {
-                    if (applyingRemoteSupabaseState || supabaseWriteInProgress || !event.new?.payload) return;
-                    try {
-                        applyingRemoteSupabaseState = true;
-                        const cfg = appState.supabaseConfig || {};
-                        appState = event.new.payload;
-                        appState.supabaseConfig = cfg;
-                        normalizeAppState();
-                        persistLocalState();
-                        updateStatsBar();
-                        renderContent();
-                        setSupabaseStatus('تم استلام تحديث سحابي لحظي ' + new Date().toLocaleTimeString('ar-IQ'), true);
-                    } catch (e) {
-                        console.error('Supabase realtime apply error:', e);
-                    } finally { applyingRemoteSupabaseState = false; }
-                })
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED') setSupabaseStatus('متصل والمزامنة اللحظية مفعّلة', true);
-                    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSupabaseStatus('الاتصال اللحظي تعذّر؛ الحفظ التلقائي مستمر');
-                });
+        function getSafeAppState() {
+            const safeState = JSON.parse(JSON.stringify(appState));
+            delete safeState.supabaseConfig;
+            delete safeState.googleConfig;
+            return safeState;
         }
 
-        async function writeSupabaseState() {
-            if (!supabaseClient || !supabaseUser || applyingRemoteSupabaseState || supabaseWriteInProgress) return false;
-            supabaseWriteInProgress = true;
+        function persistLocalState(options = {}) {
             try {
-                const payload = JSON.parse(JSON.stringify(appState));
-                delete payload.supabaseConfig;
-                const { error } = await supabaseClient.from('school_app_state').upsert({
-                    user_id: supabaseUser.id, payload, updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id' });
-                if (error) throw error;
-                setSupabaseStatus('تم الحفظ السحابي ' + new Date().toLocaleTimeString('ar-IQ'), true);
-                return true;
-            } finally { supabaseWriteInProgress = false; }
-        }
-
-        async function supabaseSyncNow() {
-            try {
-                if (!supabaseClient || !supabaseUser) {
-                    showToast('اربط Supabase وسجّل الدخول أولاً', 'error'); return;
-                }
-                await writeSupabaseState();
-                showToast('تمت مزامنة بيانات المدرسة إلى Supabase');
-            } catch (error) {
-                console.error(error); setSupabaseStatus('خطأ بالمزامنة: ' + error.message);
-                showToast('فشلت المزامنة: ' + error.message, 'error');
+                const safeState = getSafeAppState();
+                localStorage.setItem('sp_academic_local_data', JSON.stringify(safeState));
+            } catch (storageError) {
+                console.warn('Local storage save error:', storageError);
+                showToast('تعذر الحفظ المحلي؛ صدّر نسخة احتياطية لتجنب فقدان البيانات', 'error');
             }
+            if (options.syncCloud !== false && supabaseSyncEnabled) scheduleSupabaseSave();
         }
 
-        async function supabaseSignOut() {
-            try {
-                if (supabaseRealtimeChannel && supabaseClient) { await supabaseClient.removeChannel(supabaseRealtimeChannel); supabaseRealtimeChannel = null; }
-                if (supabaseClient) await supabaseClient.auth.signOut();
-                supabaseUser = null; supabaseClient = null;
-                setSupabaseStatus('تم تسجيل الخروج؛ الحفظ المحلي مستمر');
-                showToast('تم تسجيل الخروج من Supabase');
-            } catch (error) { showToast('تعذر تسجيل الخروج: ' + error.message, 'error'); }
+        function scheduleSupabaseSave() {
+            if (!supabaseSyncEnabled) return;
+            if (supabaseSaveTimer) clearTimeout(supabaseSaveTimer);
+            // Bundle rapid successive edits into one cloud request.
+            supabaseSaveTimer = setTimeout(() => {
+                supabaseSaveTimer = null;
+                saveCurrentStateToSupabase();
+            }, 700);
         }
 
-        function saveAppState() {
-            persistLocalState();
-            if (googleAccessToken) scheduleGoogleDriveSync();
-            if (supabaseClient && supabaseUser) {
-                clearTimeout(supabaseSyncTimer);
-                supabaseSyncTimer = setTimeout(() => writeSupabaseState().catch(error => {
-                    console.error('Supabase auto-sync error:', error);
-                    setSupabaseStatus('فشلت المزامنة التلقائية: ' + error.message);
-                }), 180);
-            }
-        }
-
-        // --- Google Drive appDataFolder realtime backup/restore engine ---
-        function updateGoogleDriveStatus(message) {
-            if (!appState.googleConfig) appState.googleConfig = { clientId: "", connected: false, fileId: "" };
-            appState.googleConfig.connected = Boolean(googleAccessToken);
-            const status = document.getElementById('google-drive-settings-status');
-            if (status) {
-                status.className = `text-[9px] font-black px-2 py-0.5 rounded-full ${googleAccessToken ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`;
-                status.textContent = googleAccessToken ? 'متصل' : 'إعداد';
-            }
-            const modalStatus = document.getElementById('google-drive-modal-status');
-            if (modalStatus) modalStatus.textContent = message || (googleAccessToken ? 'Google Drive متصل في هذه الجلسة' : 'Google Drive غير متصل حالياً');
-        }
-
-        async function ensureGoogleIdentityLoaded() {
-            if (window.google && window.google.accounts && window.google.accounts.oauth2) return;
-            await new Promise((resolve, reject) => {
-                let script = document.querySelector('script[data-google-identity-loader]');
-                if (script) {
-                    script.addEventListener('load', resolve, { once: true });
-                    script.addEventListener('error', reject, { once: true });
-                    return;
-                }
-                script = document.createElement('script');
-                script.src = 'https://accounts.google.com/gsi/client';
-                script.async = true;
-                script.defer = true;
-                script.dataset.googleIdentityLoader = 'true';
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-            if (!(window.google && window.google.accounts && window.google.accounts.oauth2)) {
-                throw new Error('تعذر تحميل مكتبة تسجيل الدخول من Google');
-            }
-        }
-
-        function saveGoogleClientIdFromForm() {
-            const input = document.getElementById('google-client-id-input');
-            if (input) appState.googleConfig.clientId = input.value.trim();
-            if (!appState.googleConfig.clientId) {
-                showToast('أدخل Google OAuth Client ID أولاً ثم احفظ الإعدادات', 'error');
-                return false;
-            }
-            try { localStorage.setItem('sp_academic_local_data', JSON.stringify(appState)); } catch (e) {}
-            return true;
-        }
-
-        async function requestGoogleDriveAccessToken() {
-            await ensureGoogleIdentityLoaded();
-            return await new Promise((resolve, reject) => {
-                try {
-                    googleTokenClient = window.google.accounts.oauth2.initTokenClient({
-                        client_id: appState.googleConfig.clientId,
-                        scope: 'https://www.googleapis.com/auth/drive.appdata',
-                        callback: (response) => {
-                            if (response && response.access_token) {
-                                googleAccessToken = response.access_token;
-                                resolve(response);
-                            } else {
-                                reject(new Error((response && (response.error_description || response.error)) || 'لم يتم منح إذن الوصول إلى Google Drive'));
-                            }
-                        },
-                        error_callback: (error) => reject(new Error((error && error.message) || 'تعذر إكمال تسجيل الدخول إلى Google'))
-                    });
-                    googleTokenClient.requestAccessToken({ prompt: 'consent' });
-                } catch (error) { reject(error); }
-            });
-        }
-
-        async function googleDriveFetch(url, options = {}) {
-            if (!googleAccessToken) throw new Error('حساب Google غير متصل. أعد الربط أولاً.');
-            const headers = { Authorization: `Bearer ${googleAccessToken}`, ...(options.headers || {}) };
-            const response = await fetch(url, { ...options, headers });
-            if (!response.ok) {
-                const detail = await response.text().catch(() => '');
-                if (response.status === 401) {
-                    googleAccessToken = null;
-                    updateGoogleDriveStatus('انتهت صلاحية الاتصال. أعد الربط بحساب Google للمتابعة.');
-                }
-                throw new Error(`Google Drive (${response.status}): ${detail || response.statusText}`);
-            }
-            return response;
-        }
-
-        async function findGoogleDriveBackup() {
-            const query = encodeURIComponent(`name = '${GOOGLE_DRIVE_BACKUP_NAME}' and trashed = false`);
-            const url = `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${query}&pageSize=100&fields=files(id,name,modifiedTime)`;
-            const response = await googleDriveFetch(url);
-            const data = await response.json();
-            const file = (data.files || []).find(item => item.name === GOOGLE_DRIVE_BACKUP_NAME);
-            appState.googleConfig.fileId = file ? file.id : '';
-            return file || null;
-        }
-
-        async function writeGoogleDriveBackup() {
-            if (!googleAccessToken) return false;
-            const backupPayload = JSON.stringify(appState);
-            let fileId = appState.googleConfig && appState.googleConfig.fileId;
-            if (!fileId) {
-                const existing = await findGoogleDriveBackup();
-                fileId = existing && existing.id;
-            }
-            if (!fileId) {
-                const createResponse = await googleDriveFetch('https://www.googleapis.com/drive/v3/files?fields=id,name', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: GOOGLE_DRIVE_BACKUP_NAME, parents: ['appDataFolder'], mimeType: 'application/json' })
-                });
-                const created = await createResponse.json();
-                fileId = created.id;
-                appState.googleConfig.fileId = fileId;
-            }
-            await googleDriveFetch(`https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json; charset=UTF-8' },
-                body: backupPayload
-            });
-            try { localStorage.setItem('sp_academic_local_data', JSON.stringify(appState)); } catch (e) {}
-            updateGoogleDriveStatus('تمت مزامنة البيانات إلى Google Drive');
-            return true;
-        }
-
-        async function readGoogleDriveBackup() {
-            const file = await findGoogleDriveBackup();
-            if (!file) return false;
-            const response = await googleDriveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media`);
-            const remoteState = await response.json();
-            if (!remoteState || !Array.isArray(remoteState.students)) throw new Error('ملف النسخة السحابية لا يحتوي على بيانات منظومة صالحة');
-            const localGoogleConfig = { ...(appState.googleConfig || {}), connected: true, fileId: file.id };
-            appState = remoteState;
-            appState.googleConfig = localGoogleConfig;
-            normalizeAppState();
-            updateStatsBar();
-            renderContent();
-            persistLocalState();
-            return true;
-        }
-
-        async function connectGoogleDrive() {
-            if (!appState.googleConfig) appState.googleConfig = { clientId: '', connected: false, fileId: '' };
-            if (!saveGoogleClientIdFromForm()) return;
-            try {
-                updateGoogleDriveStatus('جارٍ فتح نافذة تسجيل الدخول إلى Google…');
-                await requestGoogleDriveAccessToken();
-                appState.googleConfig.connected = true;
-                updateGoogleDriveStatus('تم تسجيل الدخول، جارٍ البحث عن النسخة السحابية…');
-                const restored = await readGoogleDriveBackup();
-                if (restored) {
-                    showToast('تم ربط Google واستعادة البيانات السحابية بنجاح');
-                } else {
-                    await writeGoogleDriveBackup();
-                    showToast('تم ربط Google وحفظ بيانات المنظومة الحالية في السحابة');
-                }
-                saveAppState();
-                updateGoogleDriveStatus('Google Drive متصل والمزامنة مفعلة');
-            } catch (error) {
-                console.error('Google Drive connection error:', error);
-                updateGoogleDriveStatus('تعذر الربط: ' + (error.message || 'تحقق من إعدادات Google'));
-                showToast('فشل الربط مع Google: تحقق من Client ID وتفعيل Drive API', 'error');
-            }
-        }
-
-        function scheduleGoogleDriveSync() {
-            if (!googleAccessToken) return;
-            if (googleSyncTimeout) clearTimeout(googleSyncTimeout);
-            googleSyncTimeout = setTimeout(async () => {
-                try {
-                    if (googleSyncInProgress) { googleSyncPending = true; return; }
-                    googleSyncInProgress = true;
-                    await writeGoogleDriveBackup();
-                } catch (error) {
-                    console.warn('Google Drive background sync failed:', error);
-                    updateGoogleDriveStatus('تعذرت المزامنة. افتح إعدادات Google وأعد الربط إذا انتهت الصلاحية.');
-                } finally {
-                    googleSyncInProgress = false;
-                    if (googleSyncPending) {
-                        googleSyncPending = false;
-                        scheduleGoogleDriveSync();
-                    }
-                }
-            }, 300);
-        }
-
-        async function syncGoogleDriveNow() {
-            if (!googleAccessToken) {
-                showToast('اربط حساب Google أولاً لتفعيل المزامنة', 'error');
+        async function saveCurrentStateToSupabase() {
+            if (!supabaseSyncEnabled) return;
+            if (supabaseSaveInFlight) {
+                supabaseSaveQueued = true;
                 return;
             }
+            supabaseSaveInFlight = true;
+            setCloudStatus('connecting', 'جارٍ حفظ البيانات...');
             try {
-                await writeGoogleDriveBackup();
-                showToast('تمت مزامنة البيانات مع Google Drive');
+                const payload = { id: SUPABASE_STATE_ROW_ID, state_data: getSafeAppState() };
+                const response = await fetch(`${SUPABASE_STATE_ENDPOINT}?on_conflict=id`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_PUBLISHABLE_KEY,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates,return=minimal'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const detail = await response.text().catch(() => '');
+                    throw new Error(`Supabase save failed (${response.status}): ${detail || response.statusText}`);
+                }
+                setCloudStatus('connected', 'متصل بالسحابة');
             } catch (error) {
-                console.error(error);
-                showToast('تعذرت المزامنة مع Google Drive؛ تحقق من الاتصال والصلاحيات', 'error');
+                console.error('Supabase cloud save error:', error);
+                setCloudStatus('error', 'فشل الحفظ السحابي');
+            } finally {
+                supabaseSaveInFlight = false;
+                if (supabaseSaveQueued) {
+                    supabaseSaveQueued = false;
+                    scheduleSupabaseSave();
+                }
             }
         }
 
-        function disconnectGoogleDrive() {
-            if (googleAccessToken && window.google && window.google.accounts && window.google.accounts.oauth2) {
-                try { window.google.accounts.oauth2.revoke(googleAccessToken, () => {}); } catch (e) {}
+        async function initializeSupabaseSync() {
+            setCloudStatus('connecting', 'جارٍ الاتصال بالسحابة...');
+            try {
+                const response = await fetch(`${SUPABASE_STATE_ENDPOINT}?id=eq.${SUPABASE_STATE_ROW_ID}&select=id,state_data&limit=1`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_PUBLISHABLE_KEY,
+                        'Accept': 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    const detail = await response.text().catch(() => '');
+                    throw new Error(`Supabase load failed (${response.status}): ${detail || response.statusText}`);
+                }
+                const rows = await response.json();
+                if (Array.isArray(rows) && rows.length > 0) {
+                    const remoteState = rows[0] && rows[0].state_data;
+                    if (!remoteState || typeof remoteState !== 'object' || !Array.isArray(remoteState.students) || !Array.isArray(remoteState.classes)) {
+                        throw new Error('The app_state row contains an invalid state_data value. Local data was preserved.');
+                    }
+                    appState = remoteState;
+                    normalizeAppState();
+                    persistLocalState({ syncCloud: false });
+                    supabaseSyncEnabled = true;
+                    updateStatsBar();
+                    renderContent();
+                    setCloudStatus('connected', 'متصل بالسحابة');
+                    // Save any data normalization/migration back to the same row.
+                    scheduleSupabaseSave();
+                } else {
+                    // First run: create row id=1 using the current local/default app state.
+                    supabaseSyncEnabled = true;
+                    setCloudStatus('connected', 'متصل بالسحابة');
+                    await saveCurrentStateToSupabase();
+                }
+            } catch (error) {
+                supabaseSyncEnabled = false;
+                console.error('Supabase initialization error:', error);
+                setCloudStatus('error', 'الحفظ المحلي فقط');
+                showToast('تعذر الاتصال بـ Supabase؛ البيانات ما زالت محفوظة محلياً', 'error');
             }
-            googleAccessToken = null;
-            googleTokenClient = null;
-            if (appState.googleConfig) appState.googleConfig.connected = false;
-            saveAppState();
-            updateGoogleDriveStatus('تم قطع الاتصال بهذه الجلسة؛ تبقى النسخة السحابية محفوظة.');
-            showToast('تم قطع اتصال Google لهذه الجلسة');
+        }
+
+        function downloadLocalBackupJSON() {
+            const safeState = getSafeAppState();
+            const blob = new Blob([JSON.stringify(safeState, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `school_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('تم تنزيل ملف النسخة الاحتياطية');
+        }
+
+        function restoreLocalBackup(input) {
+            const file = input && input.files && input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function() {
+                try {
+                    const restored = JSON.parse(String(reader.result || ''));
+                    if (!restored || typeof restored !== 'object' || !Array.isArray(restored.students) || !Array.isArray(restored.classes)) {
+                        throw new Error('ملف النسخة الاحتياطية غير صالح');
+                    }
+                    if (!confirm('سيتم استبدال البيانات الحالية بالبيانات الموجودة في النسخة الاحتياطية. هل تريد المتابعة؟')) {
+                        input.value = '';
+                        return;
+                    }
+                    appState = restored;
+                    delete appState.supabaseConfig;
+                    delete appState.googleConfig;
+                    normalizeAppState();
+                    persistLocalState();
+                    updateStatsBar();
+                    renderContent();
+                    closeModal();
+                    showToast('تم استرجاع النسخة الاحتياطية بنجاح');
+                } catch (error) {
+                    console.error(error);
+                    showToast('تعذر استرجاع النسخة؛ تحقق من صحة ملف JSON', 'error');
+                } finally {
+                    input.value = '';
+                }
+            };
+            reader.onerror = function() { showToast('تعذر قراءة ملف النسخة الاحتياطية', 'error'); input.value = ''; };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function deleteAllProgramData() {
+            appState.classes = [];
+            appState.students = [];
+            appState.subjectCatalog = [];
+            appState.subjects = [];
+            appState.schedule = [];
+            appState.attendanceRecord = {};
+            appState.savedSessions = [];
+            appState.schoolInfo = { name: 'مدرسة النموذجية', university: '', college: '', department: 'الإدارة', teacher: 'المدرس', subject: '', year: '', logo: '' };
+            appState.subjectAssignmentSchemaVersion = 2;
+            persistLocalState();
+            closeModal();
+            updateStatsBar();
+            renderContent();
+            showToast('تم حذف جميع البيانات المدخلة');
         }
 
         // --- Tabs Specification Data ---
@@ -1402,14 +1132,14 @@
             {
                 index: 0,
                 title: "الإعدادات والنظام",
-                subtitle: "إعدادات المعلم والمدرسة والنسخ الاحتياطي السحابي",
+                subtitle: "إعدادات المدرس والمدرسة والنسخ الاحتياطي المحلي",
                 icon: "fa-gear",
                 isSettings: true
             },
             {
                 index: 1,
                 title: "الصفوف والطلبة",
-                subtitle: "إدارة قيود الطلبة، الصفوف الدراسية، والبيانات والمسجلين",
+                subtitle: "إدارة الطلبة والصفوف والبيانات المسجلة",
                 icon: "fa-graduation-cap",
                 cards: [
                     { title: "إدارة الصفوف والشعب", desc: "إضافة، تعديل، وحذف الصفوف والشعب مع ربط نوع الدراسة (صباحي/مسائي)", icon: "fa-layer-group", colorBg: "bg-indigo-50 text-indigo-600 border-indigo-100", action: "add_class" },
@@ -1442,8 +1172,8 @@
             },
             {
                 index: 5,
-                title: "سجل وادارة الدرجات",
-                subtitle: "إدخال درجات الفصلين والسعي السنوي وحساب النتيجة النهائية",
+                title: "الدرجات المدرسية",
+                subtitle: "إدخال درجات الأشهر ونصف السنة والسعي السنوي والامتحان النهائي والنتيجة",
                 icon: "fa-award",
                 isGradesTab: true
             },
@@ -1520,7 +1250,6 @@
                     mainIcon.classList.remove('hidden');
                 }
             }
-            if (typeof updateGoogleDriveStatus === 'function') updateGoogleDriveStatus();
         }
 
         function renderContent() {
@@ -1572,94 +1301,54 @@
 
         // 2. Settings Tab Rendering
         function renderSettingsTab(container) {
-            let logoPreview = appState.schoolInfo.logo 
+            const logoPreview = appState.schoolInfo.logo
                 ? `<img src="${appState.schoolInfo.logo}" class="w-10 h-10 rounded-2xl object-cover border border-amber-400/40">`
-                : `<div class="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-400 flex items-center justify-center text-base border border-amber-400/30"><i class="fa-solid fa-building-columns"></i></div>`;
-
+                : `<div class="w-10 h-10 rounded-2xl bg-amber-400/20 text-amber-400 flex items-center justify-center text-base border border-amber-400/30"><i class="fa-solid fa-school"></i></div>`;
             container.innerHTML = `
                 <div class="space-y-3.5">
                     <div class="bg-gradient-to-r from-slate-900 to-indigo-950 rounded-3xl p-4 text-white shadow-md relative overflow-hidden">
                         <div class="flex justify-between items-start mb-3">
                             ${logoPreview}
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full font-bold border border-emerald-500/30">نظام إدارة مدرسية ✓</span>
+                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full font-bold border border-emerald-500/30">برنامج مدرسي ✓</span>
                         </div>
-                        <h3 class="font-black text-sm text-white">${appState.schoolInfo.name}</h3>
-                        <p class="text-[11px] text-slate-300 mt-1 font-medium">المعلم: ${appState.schoolInfo.teacher}</p>
-                        <p class="text-[10px] text-amber-400/90 mt-1">العام الدراسي: ${appState.schoolInfo.year}</p>
+                        <h3 class="font-black text-sm text-white">${escapeHtml(appState.schoolInfo.name)}</h3>
+                        <p class="text-[11px] text-slate-300 mt-1 font-medium">المدرس: ${escapeHtml(appState.schoolInfo.teacher)}${appState.schoolInfo.subject ? ` (${escapeHtml(appState.schoolInfo.subject)})` : ''}</p>
+                        <p class="text-[10px] text-amber-400/90 mt-1">العام الدراسي: ${escapeHtml(appState.schoolInfo.year || '')}</p>
                     </div>
-
                     <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80 space-y-2">
-                        <div class="flex items-center justify-between p-2.5 rounded-2xl border border-emerald-100 bg-emerald-50/30">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-sm shadow-xs"><i class="fa-solid fa-hard-drive"></i></div>
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="font-bold text-xs text-slate-800">الحفظ المحلي على هذا الجهاز</h4>
-                                    </div>
-                                    <p class="text-[10px] text-slate-400">حفظ تلقائي للبيانات دون الاتصال بقاعدة بيانات خارجية</p>
-                                </div>
-                            </div>
-                            <span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">مفعّل</span>
-                        </div>
-
-                        <div class="rounded-2xl border border-violet-200 bg-violet-50/40 p-3 space-y-2.5">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center"><i class="fa-solid fa-cloud"></i></div>
-                                <div><h4 class="font-bold text-xs text-slate-800">قاعدة البيانات السحابية Supabase</h4>
-                                <p class="text-[10px] text-slate-500">مزامنة بيانات المدرسة بين الأجهزة دون بريد إلكتروني</p></div>
-                            </div>
-                            <label class="block text-[10px] font-extrabold text-slate-600">Project URL</label>
-                            <input id="supabase-url-input" type="url" placeholder="https://xxxx.supabase.co" value="${escapeHtml((appState.supabaseConfig || {}).url || 'https://qrxkcbqnojotojddommo.supabase.co')}" class="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs" dir="ltr">
-                            <label class="block text-[10px] font-extrabold text-slate-600">Publishable / anon key</label>
-                            <input id="supabase-key-input" type="password" placeholder="sb_publishable_... أو anon key" value="${escapeHtml((appState.supabaseConfig || {}).key || 'sb_publishable_OC2bbCwGYtdfSLtbX12XOw_sUEicpM3')}" class="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs" dir="ltr" autocomplete="off">
-                            <div class="grid grid-cols-2 gap-2">
-                                <button onclick="connectSupabase()" class="bg-emerald-600 text-white py-2 rounded-xl text-xs font-black"><i class="fa-solid fa-link ml-1"></i>اتصال بالرمز</button>
-                                <button onclick="supabaseSyncNow()" class="bg-violet-700 text-white py-2 rounded-xl text-xs font-black"><i class="fa-solid fa-rotate ml-1"></i>مزامنة الآن</button>
-                            </div>
-                            <div class="flex items-center justify-between gap-2">
-                                <span id="supabase-status" class="text-[10px] text-slate-600 font-bold">غير متصل</span>
-                                <button onclick="supabaseSignOut()" class="text-[10px] text-rose-600 font-bold">تسجيل الخروج</button>
-                            </div>
-                            <p class="text-[9px] text-slate-500 leading-relaxed">المزامنة اللحظية تحتاج تفعيل Anonymous Sign-Ins وRealtime للجدول school_app_state مع سياسات RLS صحيحة. لا تستخدم service_role key هنا.</p>
-                        </div>
-
-                        <div onclick="triggerAction('edit_google_config')" class="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 cursor-pointer transition-colors border border-blue-100 bg-blue-50/30">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shadow-xs"><i class="fa-brands fa-google-drive"></i></div>
-                                <div>
-                                    <h4 class="font-bold text-xs text-slate-800">الربط مع حساب Google Drive</h4>
-                                    <p class="text-[10px] text-slate-400">نسخ سحابي لحظي واستعادة البيانات عند إعادة الربط</p>
-                                </div>
-                            </div>
-                            <span id="google-drive-settings-status" class="text-[9px] font-black px-2 py-0.5 rounded-full ${appState.googleConfig && appState.googleConfig.connected ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
-                                ${appState.googleConfig && appState.googleConfig.connected ? 'متصل' : 'إعداد'}
-                            </span>
-                        </div>
-
                         <div onclick="triggerAction('edit_school_info')" class="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 cursor-pointer transition-colors">
                             <div class="flex items-center gap-3">
                                 <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm"><i class="fa-solid fa-pen-to-square"></i></div>
                                 <div>
-                                    <h4 class="font-bold text-xs text-slate-800">بيانات المدرسة والمعلم والعام الدراسي</h4>
-                                    <p class="text-[10px] text-slate-400">تعديل الاسم، العام الدراسي، وصورة الشعار للطباعة</p>
+                                    <h4 class="font-bold text-xs text-slate-800">بيانات المدرسة والمدرس والعام الدراسي</h4>
+                                    <p class="text-[10px] text-slate-400">تعديل اسم المدرسة والمدرس والشعار</p>
                                 </div>
                             </div>
                             <i class="fa-solid fa-chevron-left text-xs text-slate-300"></i>
                         </div>
-
-                        <div onclick="triggerAction('backup_restore')" class="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 cursor-pointer transition-colors border border-emerald-100 bg-emerald-50/20">
+                        <div onclick="triggerAction('backup_data')" class="flex items-center justify-between p-2.5 rounded-2xl hover:bg-slate-50 cursor-pointer transition-colors">
                             <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm"><i class="fa-solid fa-box-archive"></i></div>
+                                <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm"><i class="fa-solid fa-file-export"></i></div>
                                 <div>
-                                    <h4 class="font-bold text-xs text-slate-800">نسخة احتياطية واستعادة</h4>
-                                    <p class="text-[10px] text-slate-400">تنزيل بيانات المدرسة أو استعادتها من ملف JSON</p>
+                                    <h4 class="font-bold text-xs text-slate-800">تصدير أو استرجاع نسخة احتياطية</h4>
+                                    <p class="text-[10px] text-slate-400">حفظ جميع البيانات في ملف أو استعادتها</p>
                                 </div>
                             </div>
                             <i class="fa-solid fa-chevron-left text-xs text-slate-300"></i>
+                        </div>
+                        <div onclick="triggerAction('delete_all_data')" class="flex items-center justify-between p-2.5 rounded-2xl hover:bg-rose-50 cursor-pointer transition-colors border border-rose-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-sm"><i class="fa-solid fa-trash-can"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-xs text-rose-700">حذف جميع البيانات المدخلة</h4>
+                                    <p class="text-[10px] text-slate-400">حذف الطلبة والصفوف والمواد والسجلات والدرجات</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-left text-xs text-rose-300"></i>
                         </div>
                     </div>
-                </div>
-            `;
+                    <p class="text-[10px] leading-relaxed text-slate-500 px-1">يُحفظ العمل على هذا الجهاز مباشرة. نزّل نسخة احتياطية بانتظام لنقل البيانات إلى جهاز آخر أو استرجاعها لاحقاً.</p>
+                </div>`;
         }
 
         // 3. Behavior Tab
@@ -1813,7 +1502,7 @@
                 badge.className = `text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${mark === 'مميز' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : mark === 'متوسط' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`;
             }
 
-            saveAppState();
+            persistLocalState();
             showToast(`تم إضافة علامة (${mark}) للطالب ${student.name} بنجاح!`);
         }
 
@@ -1958,7 +1647,7 @@
                 });
             }
             appState.savedSessions = appState.savedSessions.filter(s => s.id !== sessId);
-            saveAppState();
+            persistLocalState();
             showToast("تم حذف جلسة الحضور بنجاح!");
             renderContent();
         }
@@ -2104,7 +1793,7 @@
             const section = sectionPart || "أ";
             const studyType = studyPart || "صباحي";
             if (!subjectVal || !isAssignedSubjectToClass(subjectVal, className, section, studyType)) {
-                showToast("لا يمكن حفظ الحضور لمادة غير مرتبطة بهذا الصف والشعبة والدراسة", "error");
+                showToast("لا يمكن حفظ الحضور لمادة غير مرتبطة بهذه الصف والشعبة والدراسة", "error");
                 return;
             }
             const dayText = getDayName(dateVal);
@@ -2163,7 +1852,7 @@
             });
 
             showToast("تم حفظ جلسة الحضور بنجاح وربطها مع التقارير!");
-            saveAppState();
+            persistLocalState();
             renderContent();
         }
 
@@ -2179,188 +1868,256 @@
             showToast("جاري تحميل بيانات الجلسة للتعديل...");
         }
 
-        // --- 6. سجل الدرجات المدرسي ---
+        // --- 6. SCHOOL GRADES: monthly averages, midyear, annual work, final exam and result ---
+        function gradeNumber(value) {
+            if (value === '' || value === null || value === undefined) return null;
+            const number = Number(value);
+            return Number.isFinite(number) ? number : null;
+        }
+
+        function getGradeSubjectContext() {
+            if (currentModalType === 'report_view') return (document.getElementById('rep-subject-filter') || {}).value || 'all';
+            const gradeSelect = document.getElementById('grd-subject-select');
+            if (gradeSelect) return gradeSelect.value || 'all';
+            return getSelectedReportSubject();
+        }
+
+        function createEmptyGradeRecord() {
+            return { term1Month1: '', term1Month2: '', term1Month3: '', midyearMode: 'direct', midyearDirect: '', midyearWritten: '', midyearOral: '', midyearMonth1: '', midyearMonth2: '', term2Month1: '', term2Month2: '', term2Month3: '', finalExam: '' };
+        }
+
+        function getStudentGradeRecord(student, subjectName = getGradeSubjectContext(), create = true) {
+            if (!student) return createEmptyGradeRecord();
+            const subject = String(subjectName || 'all').trim();
+            if (!subject || subject === 'all') return student;
+            if (normalizeAcademicText(student.subject) === normalizeAcademicText(subject) && !student.gradesBySubject?.[subject]) return student;
+            if (!student.gradesBySubject || typeof student.gradesBySubject !== 'object') student.gradesBySubject = {};
+            if (!student.gradesBySubject[subject] && create) student.gradesBySubject[subject] = createEmptyGradeRecord();
+            return student.gradesBySubject[subject] || createEmptyGradeRecord();
+        }
+
+        function getMonthlyAverage(record, prefix, count = 3) {
+            const values = [];
+            for (let i = 1; i <= count; i++) {
+                const value = gradeNumber(record[`${prefix}Month${i}`]);
+                if (value !== null) values.push(value);
+            }
+            return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+        }
+
+        function getTerm1Mark(student) { return getMonthlyAverage(getStudentGradeRecord(student, getGradeSubjectContext(), false), 'term1', 3); }
+        function getTerm2Mark(student) { return getMonthlyAverage(getStudentGradeRecord(student, getGradeSubjectContext(), false), 'term2', 3); }
+
+        function getMidyearMark(student) {
+            const record = getStudentGradeRecord(student, getGradeSubjectContext(), false);
+            if ((record.midyearMode || 'direct') !== 'components') return gradeNumber(record.midyearDirect) || 0;
+            const written = gradeNumber(record.midyearWritten) || 0;
+            const oral = gradeNumber(record.midyearOral) || 0;
+            const values = [written + oral];
+            [record.midyearMonth1, record.midyearMonth2].forEach(value => {
+                const parsed = gradeNumber(value);
+                if (parsed !== null) values.push(parsed);
+            });
+            return values.reduce((sum, value) => sum + value, 0) / values.length;
+        }
+
+        function getAnnualWorkMark(student) {
+            return (getTerm1Mark(student) + getMidyearMark(student) + getTerm2Mark(student)) / 3;
+        }
+
+        function getFinalResultMark(student) {
+            const record = getStudentGradeRecord(student, getGradeSubjectContext(), false);
+            return (getAnnualWorkMark(student) + (gradeNumber(record.finalExam) || 0)) / 2;
+        }
+
+        function gradeDisplay(value) {
+            const n = Number(value) || 0;
+            return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+        }
+
+        function getGradeSubjectOptions() {
+            const names = new Set(getAllRegisteredSubjectNames());
+            appState.students.forEach(student => { if (student.subject) names.add(String(student.subject).trim()); });
+            return Array.from(names).filter(Boolean).sort((a, b) => a.localeCompare(b, 'ar'));
+        }
+
+        function updateGradesSectionOptions() {
+            const classSelect = document.getElementById('grd-class-select');
+            const sectionSelect = document.getElementById('grd-section-select');
+            if (!classSelect || !sectionSelect) return;
+            const previous = sectionSelect.value;
+            const selectedClass = classSelect.value;
+            const sections = new Map();
+            appState.classes.filter(cls => selectedClass === 'all' || normalizeAcademicText(cls.name) === normalizeAcademicText(selectedClass))
+                .forEach(cls => {
+                    const value = `${cls.section}||${cls.studyType || 'صباحي'}`;
+                    if (!sections.has(value)) sections.set(value, `الشعبة ${cls.section} - ${cls.studyType || 'صباحي'}`);
+                });
+            sectionSelect.innerHTML = `<option value="all">جميع الشعب</option>` + Array.from(sections.entries()).map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join('');
+            if (sections.has(previous)) sectionSelect.value = previous;
+        }
+
         function renderGradesTab(container) {
-            let classOptions = appState.classes.map(c => `
-                <option value="${c.name} - ${c.section} - ${c.studyType || 'صباحي'}">${c.name} (شعبة ${c.section} - ${c.studyType || 'صباحي'})</option>
-            `).join('');
+            const classes = Array.from(new Set(appState.classes.map(cls => cls.name))).sort((a, b) => a.localeCompare(b, 'ar'));
+            const classOptions = classes.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+            const subjects = getGradeSubjectOptions();
+            const subjectOptions = subjects.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+            const tabs = ['الفصل الأول', 'نصف السنة', 'الفصل الثاني', 'السعي السنوي', 'الامتحان النهائي', 'النتيجة'];
             container.innerHTML = `
                 <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80 mb-3.5">
-                    <h3 class="font-black text-slate-800 text-xs mb-2.5 flex items-center gap-1.5">
-                        <i class="fa-solid fa-award text-amber-500"></i>
-                        <span>سجل الدرجات المدرسي والنتائج من 100</span>
-                    </h3>
-                    <div class="mb-3">
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">الصف والشعبة:</label>
-                        <select id="grd-class-select" onchange="renderGradesContent()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-700 outline-none">
-                            <option value="all">جميع الصفوف والشعب</option>
-                            ${classOptions}
-                        </select>
+                    <h3 class="font-black text-slate-800 text-xs mb-2.5 flex items-center gap-1.5"><i class="fa-solid fa-award text-amber-500"></i><span>سجل الدرجات المدرسية</span></h3>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">الصف:</label>
+                            <select id="grd-class-select" onchange="updateGradesSectionOptions(); renderGradesContent()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-700 outline-none"><option value="all">جميع الصفوف</option>${classOptions}</select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">الشعبة:</label>
+                            <select id="grd-section-select" onchange="renderGradesContent()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-700 outline-none"><option value="all">جميع الشعب</option></select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">المادة الدراسية:</label>
+                            <select id="grd-subject-select" onchange="renderGradesContent()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold text-slate-700 outline-none"><option value="all">جميع المواد</option>${subjectOptions}</select>
+                        </div>
                     </div>
-                    <div class="flex bg-slate-200/80 p-1 rounded-2xl border border-slate-200 text-[9px] font-black text-slate-700 gap-1 overflow-x-auto no-scrollbar shadow-inner">
-                        <button type="button" onclick="switchGradesSubTab(0)" id="grd-subtab-0" aria-pressed="true" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap bg-slate-900 text-amber-400 shadow-md flex items-center justify-center gap-1"><i class="fa-solid fa-book-open text-[10px]"></i><span>الفصل الأول</span></button>
-                        <button type="button" onclick="switchGradesSubTab(1)" id="grd-subtab-1" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-calendar-check text-[10px]"></i><span>نصف السنة</span></button>
-                        <button type="button" onclick="switchGradesSubTab(2)" id="grd-subtab-2" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-book-open-reader text-[10px]"></i><span>الفصل الثاني</span></button>
-                        <button type="button" onclick="switchGradesSubTab(3)" id="grd-subtab-3" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-pen-to-square text-[10px]"></i><span>الامتحان النهائي</span></button>
-                        <button type="button" onclick="switchGradesSubTab(4)" id="grd-subtab-4" aria-pressed="false" class="min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1"><i class="fa-solid fa-square-poll-vertical text-[10px]"></i><span>النتيجة من 100</span></button>
+                    <div class="flex bg-slate-200/80 p-1 rounded-2xl text-[9px] font-black text-slate-700 gap-1 overflow-x-auto no-scrollbar">
+                        ${tabs.map((name, index) => `<button onclick="switchGradesSubTab(${index})" id="grd-subtab-${index}" class="flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap ${index === activeGradesSubTab ? 'bg-slate-900 text-amber-400 shadow-xs' : 'hover:bg-slate-300'}">${name}</button>`).join('')}
                     </div>
                 </div>
-                <div id="grades-subtab-content"></div>
-            `;
+                <div id="grades-subtab-content"></div>`;
+            updateGradesSectionOptions();
             renderGradesContent();
         }
 
         function switchGradesSubTab(subIndex) {
-            activeGradesSubTab = subIndex;
-            for (let i = 0; i < 5; i++) {
+            activeGradesSubTab = Math.max(0, Math.min(5, Number(subIndex) || 0));
+            for (let i = 0; i < 6; i++) {
                 const btn = document.getElementById(`grd-subtab-${i}`);
-                if (!btn) continue;
-                btn.className = i === subIndex
-                    ? "min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap bg-slate-900 text-amber-400 font-black shadow-md flex items-center justify-center gap-1"
-                    : "min-w-fit flex-1 py-2 px-2.5 rounded-xl transition-all whitespace-nowrap hover:bg-white text-slate-700 font-bold flex items-center justify-center gap-1";
-                btn.setAttribute('aria-pressed', i === subIndex ? 'true' : 'false');
+                if (btn) btn.className = `flex-1 py-1.5 px-2 rounded-xl transition-all whitespace-nowrap ${i === activeGradesSubTab ? 'bg-slate-900 text-amber-400 font-black shadow-xs' : 'hover:bg-slate-300 text-slate-700 font-bold'}`;
             }
             renderGradesContent();
         }
 
-        function numericGrade(value, max = 100) {
-            return Math.min(max, Math.max(0, Number(value) || 0));
+        function getGradeFilteredStudents() {
+            const selectedClass = (document.getElementById('grd-class-select') || {}).value || 'all';
+            const selectedSection = (document.getElementById('grd-section-select') || {}).value || 'all';
+            const selectedSubject = (document.getElementById('grd-subject-select') || {}).value || 'all';
+            return sortStudentsAlphabetically(appState.students.filter(student => {
+                if (selectedClass !== 'all' && normalizeAcademicText(student.class) !== normalizeAcademicText(selectedClass)) return false;
+                if (selectedSection !== 'all') {
+                    const [section, studyType] = selectedSection.split('||');
+                    if (normalizeAcademicText(student.section) !== normalizeAcademicText(section) || normalizeAcademicText(student.studyType || 'صباحي') !== normalizeAcademicText(studyType || 'صباحي')) return false;
+                }
+                if (selectedSubject !== 'all') {
+                    const directMatch = normalizeAcademicText(student.subject) === normalizeAcademicText(selectedSubject);
+                    const classLinkMatch = isAssignedSubjectToClass(selectedSubject, student.class, student.section, student.studyType || 'صباحي');
+                    if (!directMatch && !classLinkMatch) return false;
+                }
+                return true;
+            }));
         }
-        function roundGrade(value) { return Math.round((Number(value) || 0) * 100) / 100; }
-        function formatGrade(value) { return Number.isFinite(Number(value)) ? String(roundGrade(value)) : '0'; }
-        function getTermGrade(student, termNumber) {
-            const count = Number(appState.gradeSettings[`term${termNumber}MonthsCount`]) === 2 ? 2 : 3;
-            let total = 0;
-            for (let month = 1; month <= count; month++) total += numericGrade(student[`term${termNumber}Month${month}`]);
-            return roundGrade(total / count);
+
+        function renderGradeRows(filtered, inputRenderer, computedRenderer) {
+            return filtered.map((student, index) => `<tr class="border-b border-slate-100 text-[11px]">
+                <td class="p-2 text-center font-bold">${index + 1}</td>
+                <td class="p-2 font-bold text-slate-800 whitespace-nowrap">${escapeHtml(student.name)}</td>
+                ${inputRenderer ? inputRenderer(student) : ''}${computedRenderer ? computedRenderer(student) : ''}
+            </tr>`).join('');
         }
-        function getMidyearGrade(student) {
-            if (appState.gradeSettings.midyearMode === 'split') {
-                return roundGrade(numericGrade(student.midyearWritten, 80) + numericGrade(student.midyearOral, 20));
-            }
-            return roundGrade(numericGrade(student.midyearDirect, 100));
+
+        function gradeTableCard(title, description, headers, rows, saveHandler = '') {
+            return `<div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
+                <div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded-2xl mb-3 text-indigo-900"><p class="text-[10px] font-black">${title}</p><p class="text-[10px] mt-1">${description}</p></div>
+                <div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr>${headers.map(header => `<th class="p-2 text-center whitespace-nowrap">${header}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+                ${saveHandler ? `<button onclick="${saveHandler}()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ الدرجات</span></button>` : ''}
+            </div>`;
         }
-        function getAnnualEffortGrade(student) {
-            return roundGrade((getTermGrade(student, 1) + getMidyearGrade(student) + getTermGrade(student, 2)) / 3);
-        }
-        function getFinalResultGrade(student) {
-            return roundGrade((getAnnualEffortGrade(student) + numericGrade(student.final, 100)) / 2);
-        }
-        function getGradeResultStatus(student) { return getFinalResultGrade(student) >= 50 ? 'ناجح' : 'راسب'; }
 
         function renderGradesContent() {
-            const classFilterVal = document.getElementById('grd-class-select') ? document.getElementById('grd-class-select').value : 'all';
             const container = document.getElementById('grades-subtab-content');
             if (!container) return;
-            let filtered = [...appState.students];
-            if (classFilterVal !== 'all') {
-                const [cName, sSec, sStudy] = classFilterVal.split(' - ');
-                filtered = filtered.filter(s => (s.class || '').trim() === (cName || '').trim() && (s.section || '').trim() === (sSec || '').trim() && (s.studyType || 'صباحي').trim() === (sStudy || '').trim());
-            }
-            filtered = sortStudentsAlphabetically(filtered);
+            const filtered = getGradeFilteredStudents();
             if (!filtered.length) {
-                container.innerHTML = `<div class="bg-white rounded-3xl p-5 text-center text-xs text-slate-400 font-bold">لا يوجد طلبة في الصف/الشعبة المحددة</div>`;
+                container.innerHTML = `<div class="bg-white rounded-3xl p-5 text-center text-xs text-slate-400 font-bold">لا يوجد طلبة مطابقون للصف والشعبة والمادة المحددة</div>`;
                 return;
             }
-            if (activeGradesSubTab === 0 || activeGradesSubTab === 2) {
-                const term = activeGradesSubTab === 0 ? 1 : 2;
-                const count = Number(appState.gradeSettings[`term${term}MonthsCount`]) === 2 ? 2 : 3;
-                const accent = term === 1 ? 'text-indigo-700' : 'text-sky-700';
-                const panelClass = term === 1 ? 'bg-indigo-50 border border-indigo-200 text-indigo-900' : 'bg-sky-50 border border-sky-200 text-sky-900';
-                const iconClass = term === 1 ? 'text-indigo-600' : 'text-sky-600';
-                const rows = filtered.map((student, idx) => {
-                    const months = [1,2,3].filter(month => month <= count).map(month => `
-                        <td class="p-2 text-center"><input type="number" min="0" max="100" step="0.5" inputmode="decimal" id="inp-t${term}m${month}-${student.id}" value="${numericGrade(student[`term${term}Month${month}`])}" oninput="updateMonthlyMark(${JSON.stringify(student.id)}, ${term}, ${month}, this.value)" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold text-slate-900 outline-none"></td>
-                    `).join('');
-                    return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 font-bold text-center">${idx+1}</td><td class="p-2 font-bold text-slate-800">${student.name}</td>${months}<td class="p-2 text-center font-black ${accent} text-sm" id="term-score-${term}-${student.id}">${formatGrade(getTermGrade(student, term))}</td></tr>`;
-                }).join('');
-                container.innerHTML = `
-                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="${panelClass} p-2.5 rounded-2xl mb-3">
-                            <div class="flex items-center gap-2"><i class="fa-solid fa-circle-info ${iconClass}"></i><p class="text-[10px] font-bold">كل درجة شهر من 100. درجة الفصل = مجموع درجات الأشهر ÷ عدد الأشهر المختار (2 أو 3).</p></div>
-                        </div>
-                        <div class="mb-3 flex items-center gap-2"><label class="text-[10px] font-bold text-slate-600">عدد الأشهر المحتسبة:</label><select onchange="setTermMonthsCount(${term}, this.value)" class="bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold"><option value="2" ${count === 2 ? 'selected' : ''}>شهران (÷ 2)</option><option value="3" ${count === 3 ? 'selected' : ''}>ثلاثة أشهر (÷ 3)</option></select><span class="text-[9px] text-slate-400">الشهر الثالث اختياري</span></div>
-                        <div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${Array.from({length:count}, (_, i) => `<th class="p-2 text-center">الشهر ${['الأول','الثاني','الثالث'][i]} /100</th>`).join('')}<th class="p-2 text-center">درجة الفصل /100</th></tr></thead><tbody>${rows}</tbody></table></div>
-                        <button onclick="saveMonthlyGrades(${term})" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ درجات ${term === 1 ? 'الفصل الأول' : 'الفصل الثاني'}</span></button>
-                    </div>`;
-                return;
+            const nameCols = ['<th class="p-2 text-center">#</th>', '<th class="p-2">اسم الطالب</th>'];
+            let html = '';
+            if (activeGradesSubTab === 0) {
+                const rows = renderGradeRows(filtered, s => {
+                    const g = getStudentGradeRecord(s);
+                    return [1, 2, 3].map(i => `<td class="p-2 text-center"><input type="number" min="0" max="100" step="0.25" id="grade-t1m${i}-${s.id}" value="${g[`term1Month${i}`] ?? ''}" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold outline-none"></td>`).join('');
+                }, s => `<td class="p-2 text-center font-black text-indigo-700">${gradeDisplay(getTerm1Mark(s))}</td>`);
+                html = gradeTableCard('الفصل الأول', 'أدخل درجات الأشهر المتاحة. معدل الفصل = مجموع درجات الأشهر المدخلة ÷ عددها.', [...nameCols, '<th>الشهر الأول</th>', '<th>الشهر الثاني</th>', '<th>الشهر الثالث</th>', '<th>معدل الفصل</th>'], rows, 'saveTerm1Grades');
+            } else if (activeGradesSubTab === 1) {
+                const rows = renderGradeRows(filtered, s => {
+                    const g = getStudentGradeRecord(s);
+                    return `<td class="p-1.5"><select id="grade-mid-mode-${s.id}" class="w-24 bg-slate-50 border p-1 rounded-lg text-[10px] font-bold"><option value="direct" ${(g.midyearMode || 'direct') === 'direct' ? 'selected' : ''}>مباشر /100</option><option value="components" ${g.midyearMode === 'components' ? 'selected' : ''}>تحريري + شفهي</option></select></td>
+                    <td class="p-1.5"><input type="number" min="0" max="100" step="0.25" id="grade-mid-direct-${s.id}" value="${g.midyearDirect ?? ''}" placeholder="/100" class="w-14 bg-slate-50 border p-1 rounded-lg text-center text-[10px]"></td>
+                    <td class="p-1.5"><input type="number" min="0" max="80" step="0.25" id="grade-mid-written-${s.id}" value="${g.midyearWritten ?? ''}" placeholder="/80" class="w-12 bg-slate-50 border p-1 rounded-lg text-center text-[10px]"></td>
+                    <td class="p-1.5"><input type="number" min="0" max="20" step="0.25" id="grade-mid-oral-${s.id}" value="${g.midyearOral ?? ''}" placeholder="/20" class="w-12 bg-slate-50 border p-1 rounded-lg text-center text-[10px]"></td>
+                    <td class="p-1.5"><input type="number" min="0" max="100" step="0.25" id="grade-mid-m1-${s.id}" value="${g.midyearMonth1 ?? ''}" placeholder="اختياري" class="w-14 bg-slate-50 border p-1 rounded-lg text-center text-[10px]"></td>
+                    <td class="p-1.5"><input type="number" min="0" max="100" step="0.25" id="grade-mid-m2-${s.id}" value="${g.midyearMonth2 ?? ''}" placeholder="اختياري" class="w-14 bg-slate-50 border p-1 rounded-lg text-center text-[10px]"></td>`;
+                }, s => `<td class="p-2 text-center font-black text-indigo-700">${gradeDisplay(getMidyearMark(s))}</td>`);
+                html = gradeTableCard('نصف السنة', 'اختر درجة مباشرة من 100، أو أدخل التحريري من 80 والشفهي من 20. في النمط الثاني يمكن إضافة شهر أو شهرين اختياريين؛ ويُحسب المتوسط حسب عدد الدرجات المدخلة.', [...nameCols, '<th>النمط</th>', '<th>مباشر /100</th>', '<th>تحريري /80</th>', '<th>شفهي /20</th>', '<th>شهر 1 اختياري</th>', '<th>شهر 2 اختياري</th>', '<th>معدل النصف</th>'], rows, 'saveMidyearGrades');
+            } else if (activeGradesSubTab === 2) {
+                const rows = renderGradeRows(filtered, s => {
+                    const g = getStudentGradeRecord(s);
+                    return [1, 2, 3].map(i => `<td class="p-2 text-center"><input type="number" min="0" max="100" step="0.25" id="grade-t2m${i}-${s.id}" value="${g[`term2Month${i}`] ?? ''}" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold outline-none"></td>`).join('');
+                }, s => `<td class="p-2 text-center font-black text-sky-700">${gradeDisplay(getTerm2Mark(s))}</td>`);
+                html = gradeTableCard('الفصل الثاني', 'أدخل درجات الأشهر المتاحة؛ معدل الفصل = مجموع درجات الأشهر المدخلة ÷ عددها.', [...nameCols, '<th>الشهر الأول</th>', '<th>الشهر الثاني</th>', '<th>الشهر الثالث</th>', '<th>معدل الفصل</th>'], rows, 'saveTerm2Grades');
+            } else if (activeGradesSubTab === 3) {
+                const rows = renderGradeRows(filtered, null, s => `<td class="p-2 text-center font-bold text-indigo-700">${gradeDisplay(getTerm1Mark(s))}</td><td class="p-2 text-center font-bold text-sky-700">${gradeDisplay(getMidyearMark(s))}</td><td class="p-2 text-center font-bold text-violet-700">${gradeDisplay(getTerm2Mark(s))}</td><td class="p-2 text-center font-black text-amber-700">${gradeDisplay(getAnnualWorkMark(s))} / 100</td>`);
+                html = gradeTableCard('السعي السنوي', 'السعي السنوي = (معدل الفصل الأول + درجة نصف السنة + معدل الفصل الثاني) ÷ 3.', [...nameCols, '<th>الفصل الأول</th>', '<th>نصف السنة</th>', '<th>الفصل الثاني</th>', '<th>السعي السنوي</th>'], rows);
+            } else if (activeGradesSubTab === 4) {
+                const rows = renderGradeRows(filtered, s => {
+                    const g = getStudentGradeRecord(s);
+                    return `<td class="p-2 text-center"><input type="number" min="0" max="100" step="0.25" id="grade-final-${s.id}" value="${g.finalExam ?? ''}" class="w-16 bg-slate-50 border p-1 rounded-lg text-center font-bold text-purple-900 outline-none"></td>`;
+                }, s => `<td class="p-2 text-center font-black text-amber-700">${gradeDisplay(getAnnualWorkMark(s))}</td>`);
+                html = gradeTableCard('الامتحان النهائي', 'أدخل درجة الامتحان النهائي من 100. تُستخدم مع السعي السنوي لحساب النتيجة من 100.', [...nameCols, '<th>الامتحان النهائي /100</th>', '<th>السعي السنوي</th>'], rows, 'saveFinalGrades');
+            } else {
+                const rows = renderGradeRows(filtered, null, s => {
+                    const annual = getAnnualWorkMark(s);
+                    const record = getStudentGradeRecord(s);
+                    const final = gradeNumber(record.finalExam) || 0;
+                    const result = getFinalResultMark(s);
+                    const passed = result >= 50;
+                    return `<td class="p-2 text-center">${gradeDisplay(annual)}</td><td class="p-2 text-center">${gradeDisplay(final)}</td><td class="p-2 text-center font-black text-lg ${passed ? 'text-emerald-700' : 'text-rose-700'}">${gradeDisplay(result)} / 100</td><td class="p-2 text-center"><span class="px-2 py-1 rounded-full text-[10px] font-black ${passed ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${passed ? 'ناجح' : 'راسب'}</span></td>`;
+                });
+                html = gradeTableCard('النتيجة المدرسية', 'النتيجة النهائية = (السعي السنوي + درجة الامتحان النهائي) ÷ 2، من 100.', [...nameCols, '<th>السعي السنوي</th>', '<th>النهائي</th>', '<th>النتيجة /100</th>', '<th>الحالة</th>'], rows);
             }
-            if (activeGradesSubTab === 1) {
-                const mode = appState.gradeSettings.midyearMode;
-                const rows = filtered.map((student, idx) => {
-                    const marks = mode === 'split'
-                        ? `<td class="p-2 text-center"><input type="number" min="0" max="80" step="0.5" value="${numericGrade(student.midyearWritten,80)}" oninput="updateMidyearGrade(${JSON.stringify(student.id)}, 'written', this.value)" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold"></td><td class="p-2 text-center"><input type="number" min="0" max="20" step="0.5" value="${numericGrade(student.midyearOral,20)}" oninput="updateMidyearGrade(${JSON.stringify(student.id)}, 'oral', this.value)" class="w-14 bg-slate-50 border p-1 rounded-lg text-center font-bold"></td>`
-                        : `<td class="p-2 text-center"><input type="number" min="0" max="100" step="0.5" value="${numericGrade(student.midyearDirect)}" oninput="updateMidyearGrade(${JSON.stringify(student.id)}, 'direct', this.value)" class="w-16 bg-slate-50 border p-1 rounded-lg text-center font-bold"></td>`;
-                    return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${idx+1}</td><td class="p-2 font-bold text-slate-800">${student.name}</td>${marks}<td id="midyear-score-${student.id}" class="p-2 text-center font-black text-amber-700">${formatGrade(getMidyearGrade(student))}</td></tr>`;
-                }).join('');
-                container.innerHTML = `
-                    <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80">
-                        <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-2xl mb-3 text-amber-900"><p class="text-[10px] font-bold">نصف السنة من 100: أدخل الدرجة مباشرة، أو اختر التحريري من 80 والشفهي من 20.</p></div>
-                        <div class="mb-3"><label class="block text-[10px] font-bold text-slate-600 mb-1">طريقة إدخال درجة نصف السنة:</label><select id="midyear-mode-select" onchange="setMidyearMode(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold"><option value="direct" ${mode === 'direct' ? 'selected' : ''}>درجة مباشرة من 100</option><option value="split" ${mode === 'split' ? 'selected' : ''}>تحريري من 80 + شفهي من 20</option></select></div>
-                        <div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${mode === 'split' ? '<th class="p-2 text-center">تحريري /80</th><th class="p-2 text-center">شفهي /20</th>' : '<th class="p-2 text-center">نصف السنة /100</th>'}<th class="p-2 text-center">المجموع /100</th></tr></thead><tbody>${rows}</tbody></table></div>
-                        <button onclick="saveMidyearGrades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ درجات نصف السنة</span></button>
-                    </div>`;
-                return;
-            }
-            if (activeGradesSubTab === 3) {
-                const rows = filtered.map((student, idx) => `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${idx+1}</td><td class="p-2 font-bold text-slate-800">${student.name}</td><td class="p-2 text-center font-bold text-indigo-700">${formatGrade(getAnnualEffortGrade(student))}</td><td class="p-2 text-center"><input type="number" min="0" max="100" step="0.5" id="inp-final-${student.id}" value="${numericGrade(student.final)}" oninput="updateFinalGrade(${JSON.stringify(student.id)}, this.value)" class="w-16 bg-slate-50 border p-1 rounded-lg text-center font-bold text-purple-900 outline-none"></td></tr>`).join('');
-                container.innerHTML = `<div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80"><div class="bg-purple-50 border border-purple-200 p-2.5 rounded-2xl mb-3 text-purple-900"><p class="text-[10px] font-bold">الامتحان النهائي من 100 درجة. السعي السنوي = (الفصل الأول + نصف السنة + الفصل الثاني) ÷ 3.</p></div><div class="overflow-x-auto"><table class="w-full text-right"><thead class="bg-slate-900 text-amber-400 text-[10px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">السعي السنوي /100</th><th class="p-2 text-center">الامتحان النهائي /100</th></tr></thead><tbody>${rows}</tbody></table></div><button onclick="saveFinalGrades()" class="w-full mt-3 bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-1.5"><i class="fa-solid fa-floppy-disk"></i><span>حفظ درجات الامتحان النهائي</span></button></div>`;
-                return;
-            }
-            const rows = filtered.map((student, idx) => {
-                const t1 = getTermGrade(student, 1), mid = getMidyearGrade(student), t2 = getTermGrade(student, 2);
-                const annual = getAnnualEffortGrade(student), final = numericGrade(student.final), result = getFinalResultGrade(student), passed = result >= 50;
-                const rowBg = passed ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950' : 'bg-rose-50/70 border-rose-200 text-rose-950';
-                const badge = passed ? 'bg-emerald-600 text-white shadow-xs' : 'bg-rose-600 text-white shadow-xs';
-                return `<tr class="border-b ${rowBg} text-[10px] font-bold"><td class="p-2 text-center">${idx+1}</td><td class="p-2 font-black text-slate-900">${student.name}</td><td class="p-2 text-center">${formatGrade(t1)}</td><td class="p-2 text-center">${formatGrade(mid)}</td><td class="p-2 text-center">${formatGrade(t2)}</td><td class="p-2 text-center">${formatGrade(annual)}</td><td class="p-2 text-center">${formatGrade(final)}</td><td class="p-2 text-center text-base font-black ${passed ? 'text-emerald-700' : 'text-rose-700'}">${formatGrade(result)}</td><td class="p-2 text-center"><span class="px-2.5 py-1 rounded-full text-[10px] font-black ${badge}">${passed ? 'ناجح ✓' : 'راسب ✗'}</span></td></tr>`;
-            }).join('');
-            container.innerHTML = `<div class="bg-white rounded-3xl p-3.5 shadow-sm border border-slate-200/80"><div class="bg-slate-900 text-white p-3 rounded-2xl mb-3"><h4 class="font-extrabold text-xs text-amber-400">النتيجة المدرسية النهائية من 100</h4><p class="text-[10px] text-slate-300 mt-1">السعي السنوي = (الفصل الأول + نصف السنة + الفصل الثاني) ÷ 3، والنتيجة = (السعي السنوي + الامتحان النهائي) ÷ 2.</p></div><div class="overflow-x-auto"><table class="w-full text-right border-collapse"><thead class="bg-slate-900 text-amber-400 text-[9px]"><tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th><th class="p-2 text-center">الفصل الأول</th><th class="p-2 text-center">نصف السنة</th><th class="p-2 text-center">الفصل الثاني</th><th class="p-2 text-center">السعي السنوي</th><th class="p-2 text-center">النهائي</th><th class="p-2 text-center">النتيجة /100</th><th class="p-2 text-center">النتيجة</th></tr></thead><tbody class="divide-y divide-slate-200">${rows}</tbody></table></div></div>`;
+            container.innerHTML = html;
         }
 
-        function updateMonthlyMark(studentId, term, month, value) {
-            const student = appState.students.find(item => String(item.id) === String(studentId));
-            if (!student) return;
-            student[`term${term}Month${month}`] = numericGrade(value);
-            const score = document.getElementById(`term-score-${term}-${studentId}`);
-            if (score) score.textContent = formatGrade(getTermGrade(student, term));
-            saveAppState();
+        function saveTerm1Grades() {
+            getGradeFilteredStudents().forEach(s => { const g = getStudentGradeRecord(s); [1,2,3].forEach(i => { const input = document.getElementById(`grade-t1m${i}-${s.id}`); if (input) g[`term1Month${i}`] = input.value === '' ? '' : Math.min(100, Math.max(0, Number(input.value) || 0)); }); });
+            persistLocalState(); renderGradesContent(); showToast('تم حفظ درجات الفصل الأول');
         }
-        function setTermMonthsCount(term, value) {
-            appState.gradeSettings[`term${term}MonthsCount`] = Number(value) === 2 ? 2 : 3;
-            saveAppState();
-            renderGradesContent();
+        function saveMidyearGrades() {
+            getGradeFilteredStudents().forEach(s => {
+                const getVal = id => { const input = document.getElementById(id); return input && input.value !== '' ? Math.max(0, Number(input.value) || 0) : ''; };
+                const g = getStudentGradeRecord(s);
+                const mode = document.getElementById(`grade-mid-mode-${s.id}`);
+                g.midyearMode = mode ? mode.value : 'direct';
+                g.midyearDirect = getVal(`grade-mid-direct-${s.id}`);
+                g.midyearWritten = getVal(`grade-mid-written-${s.id}`);
+                g.midyearOral = getVal(`grade-mid-oral-${s.id}`);
+                g.midyearMonth1 = getVal(`grade-mid-m1-${s.id}`);
+                g.midyearMonth2 = getVal(`grade-mid-m2-${s.id}`);
+                if (g.midyearWritten !== '') g.midyearWritten = Math.min(80, g.midyearWritten);
+                if (g.midyearOral !== '') g.midyearOral = Math.min(20, g.midyearOral);
+                if (g.midyearDirect !== '') g.midyearDirect = Math.min(100, g.midyearDirect);
+            });
+            persistLocalState(); renderGradesContent(); showToast('تم حفظ درجات نصف السنة');
         }
-        function setMidyearMode(value) {
-            appState.gradeSettings.midyearMode = value === 'split' ? 'split' : 'direct';
-            saveAppState();
-            renderGradesContent();
+        function saveTerm2Grades() {
+            getGradeFilteredStudents().forEach(s => { const g = getStudentGradeRecord(s); [1,2,3].forEach(i => { const input = document.getElementById(`grade-t2m${i}-${s.id}`); if (input) g[`term2Month${i}`] = input.value === '' ? '' : Math.min(100, Math.max(0, Number(input.value) || 0)); }); });
+            persistLocalState(); renderGradesContent(); showToast('تم حفظ درجات الفصل الثاني');
         }
-        function updateMidyearGrade(studentId, field, value) {
-            const student = appState.students.find(item => String(item.id) === String(studentId));
-            if (!student) return;
-            const limits = { direct: 100, written: 80, oral: 20 };
-            const fieldMap = { direct: 'midyearDirect', written: 'midyearWritten', oral: 'midyearOral' };
-            student[fieldMap[field]] = numericGrade(value, limits[field] || 100);
-            const score = document.getElementById(`midyear-score-${studentId}`);
-            if (score) score.textContent = formatGrade(getMidyearGrade(student));
-            saveAppState();
+        function saveFinalGrades() {
+            getGradeFilteredStudents().forEach(s => { const g = getStudentGradeRecord(s); const input = document.getElementById(`grade-final-${s.id}`); if (input) g.finalExam = input.value === '' ? '' : Math.min(100, Math.max(0, Number(input.value) || 0)); });
+            persistLocalState(); renderGradesContent(); showToast('تم حفظ درجات الامتحان النهائي');
         }
-        function updateFinalGrade(studentId, value) {
-            const student = appState.students.find(item => String(item.id) === String(studentId));
-            if (!student) return;
-            student.final = numericGrade(value);
-            saveAppState();
-        }
-        function saveMonthlyGrades(term) {
-            saveAppState();
-            showToast(`تم حفظ درجات ${term === 1 ? 'الفصل الأول' : 'الفصل الثاني'} بنجاح`);
-            renderGradesContent();
-        }
-        function saveTerm1Grades() { saveMonthlyGrades(1); }
-        function saveTerm2Grades() { saveMonthlyGrades(2); }
-        function saveMidyearGrades() { saveAppState(); showToast('تم حفظ درجات نصف السنة بنجاح'); renderGradesContent(); }
-        function saveFinalGrades() { saveAppState(); showToast('تم حفظ درجات الامتحان النهائي بنجاح'); renderGradesContent(); }
-
 
         // --- Subject-aware report filters (used by all report categories) ---
         let activeReportKey = '';
@@ -2635,7 +2392,7 @@
 
                         ${renderReportButton('behavior_summary', 'تقرير المتابعة', 'حساب عدد العلامات (مميز، متوسط، سيء) لكل طالب وطباعتها حسب الصف والشعبة والدراسة', 'fa-star-half-stroke', 'bg-amber-50 text-amber-600')}
                         ${renderReportButton('all_students', 'قائمة جميع الطلبة', 'عرض وطباعة أسماء الطلبة حسب الصف والشعبة ونوع الدراسة المحددة', 'fa-users-line', 'bg-blue-50 text-blue-600')}
-                        ${renderReportButton('students_by_section', 'قائمة طلبة حسب شعبة معينة', 'طباعة أسماء الطلاب حسب الصف والشعبة المدرسية والدراسة', 'fa-network-wired', 'bg-emerald-50 text-emerald-600')}
+                        ${renderReportButton('students_by_section', 'قائمة طلبة حسب شعبة معينة', 'طباعة أسماء الطلاب حسب الصف والشعبة الأكاديمية والدراسة', 'fa-network-wired', 'bg-emerald-50 text-emerald-600')}
                         ${renderReportButton('students_by_year', 'قائمة حسب السنة الدراسية', 'قوائم وقيود الطلبة للعام الدراسي الحالي', 'fa-calendar-check', 'bg-rose-50 text-rose-600')}
                     </div>
 
@@ -2659,10 +2416,10 @@
                             <p class="text-[10px] font-bold text-slate-700">نتائج الفصول، السعي النصفي، والنهائي</p>
                         </div>
 
-                        ${renderReportButton('grades_by_section', 'درجات الشعبة كاملة', 'كشف الفصل الأول ونصف السنة والفصل الثاني والسعي السنوي والنهائي والنتيجة من 100', 'fa-list-ol', 'bg-emerald-50 text-emerald-600')}
-                        ${renderReportButton('grades_term_specific', 'درجات الفصل المحدد', 'طباعة درجات الفصل الأول أو نصف السنة أو الفصل الثاني أو السعي السنوي أو النهائي والنتيجة من 100', 'fa-file-signature', 'bg-amber-50 text-amber-700')}
-                        ${renderReportButton('grades_passed', 'الطلبة الناجحون', 'قوائم الطلبة الحاصلين على نتيجة نهائية من 50 فأعلى من 100', 'fa-circle-check', 'bg-emerald-100 text-emerald-800')}
-                        ${renderReportButton('grades_failed', 'الطلبة الراسبون', 'قوائم الطلبة الذين تقل نتيجتهم النهائية عن 50 من 100', 'fa-circle-xmark', 'bg-rose-100 text-rose-800')}
+                        ${renderReportButton('grades_by_section', 'درجات الصف والشعبة كاملة', 'طباعة درجات الفصلين ونصف السنة والسعي السنوي والامتحان النهائي والنتيجة للشعبة', 'fa-list-ol', 'bg-emerald-50 text-emerald-600')}
+                        ${renderReportButton('grades_term_specific', 'درجات الفصل المحدد', 'طباعة درجة فصل معين (الأول، الثاني، السعي، أو النهائي) فقط حسب الصف والشعبة والدراسة', 'fa-file-signature', 'bg-amber-50 text-amber-700')}
+                        ${renderReportButton('grades_passed', 'الطلبة الناجحون', 'قوائم الطلبة الحاصلين على درجة 50 فأعلى', 'fa-circle-check', 'bg-emerald-100 text-emerald-800')}
+                        ${renderReportButton('grades_failed', 'الطلبة الراسبون', 'قوائم الطلبة الراسبين في المادة/السعي', 'fa-circle-xmark', 'bg-rose-100 text-rose-800')}
                         ${renderReportButton('grades_min_max', 'أعلى وأدنى الدرجات', 'إحصائيات أعلى وأقل درجة ومتفوقي الدفعة', 'fa-chart-line', 'bg-amber-50 text-amber-600')}
                     </div>
                 </div>
@@ -2701,56 +2458,6 @@
         }
 
         // --- DYNAMIC REPORT GENERATOR FUNCTION ---
-        // فتح نافذة طباعة مستقلة تضم التقرير الحالي فقط؛ يعمل خيار PDF عبر نافذة الطباعة في المتصفح.
-        function printReport() {
-            const reportBody = document.getElementById('modal-body');
-            if (!reportBody || !reportBody.innerHTML.trim()) {
-                showToast('لا توجد بيانات تقرير جاهزة للطباعة', 'error');
-                return;
-            }
-
-            const printWindow = window.open('', '_blank', 'width=1000,height=800');
-            if (!printWindow) {
-                showToast('يرجى السماح بالنوافذ المنبثقة لإكمال الطباعة أو حفظ PDF', 'error');
-                return;
-            }
-
-            const documentHead = document.head.innerHTML;
-            const reportHtml = reportBody.innerHTML;
-            const printOverrides = `
-                <style>
-                    html, body { background:#fff !important; color:#000 !important; margin:0 !important; padding:0 !important; height:auto !important; min-height:0 !important; display:block !important; }
-                    body { font-family:'Cairo',sans-serif !important; }
-                    #modal-body { display:block !important; width:100% !important; max-width:none !important; height:auto !important; max-height:none !important; overflow:visible !important; padding:0 !important; margin:0 !important; }
-                    @media screen { .print-only-header, .print-body-title-block { display:none !important; } }
-                    @media print {
-                        html, body { width:100% !important; background:#fff !important; color:#000 !important; overflow:visible !important; }
-                        #modal-body { overflow:visible !important; max-height:none !important; }
-                        .no-print, .print-hidden-control, button, nav, .bottom-dock { display:none !important; }
-                        .print-only-header, .print-body-title-block { display:block !important; }
-                        .print-info-strip { display:flex !important; border:1.5px solid #0f172a !important; background:#f8fafc !important; color:#0f172a !important; }
-                        table { width:100% !important; border-collapse:collapse !important; page-break-inside:auto !important; }
-                        thead { display:table-header-group !important; }
-                        tr { page-break-inside:avoid !important; }
-                        th, td { border:1px solid #0f172a !important; padding:6px 8px !important; color:#000 !important; }
-                        * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-                        @page { size:A4; margin:12mm 15mm; }
-                    }
-                </style>`;
-
-            printWindow.document.open();
-            printWindow.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>طباعة التقرير - برنامج إدارة المدارس</title>${documentHead}${printOverrides}</head><body><div id="modal-body">${reportHtml}</div><script>
-                window.addEventListener('load', function () {
-                    setTimeout(function () {
-                        try { window.focus(); window.print(); }
-                        catch (error) { console.error('Print error:', error); }
-                    }, 900);
-                });
-                window.addEventListener('afterprint', function () { setTimeout(function () { window.close(); }, 300); });
-            <\/script></body></html>`);
-            printWindow.document.close();
-        }
-
         function generateReport(reportKey) {
             activeReportKey = reportKey;
             currentModalType = "report_view";
@@ -2765,7 +2472,7 @@
             box.classList.remove('scale-95');
             box.classList.add('scale-100');
 
-            subtitleEl.innerText = "مدرسة بغداد | كشف ومستند رسمي جاهز للطباعة وتصدير PDF";
+            subtitleEl.innerText = "المدرسة | كشف ومستند رسمي جاهز للطباعة وتصدير PDF";
 
             let classSelectOptions = appState.classes.map(c => `
                 <option value="${c.name} - ${c.section} - ${c.studyType || 'صباحي'}">${c.name} (شعبة ${c.section} - ${c.studyType || 'صباحي'})</option>
@@ -2777,12 +2484,12 @@
                 `<option value="${name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}">${name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`
             ).join('');
 
-            // ترويسة الطباعة الرسمية: مديرية التربية والمدرسة والإدارة والمعلم بخط 11 وبنقاط تعداد
+            // ترويسة الطباعة الرسمية: المدرسة والقسم والمدرس بخط 11 وبنقاط تعداد
             function getPrintableHeader(stageId) {
                 const info = appState.schoolInfo || {};
                 const institutionParts = String(info.name || '').split(/\s*[-–—]\s*/);
-                const universityName = info.university || institutionParts[0] || 'المدرسة';
-                const collegeName = info.college || institutionParts[1] || 'المدرسة';
+                const universityName = info.name || info.school || institutionParts[0] || 'المدرسة';
+                const collegeName = info.name || institutionParts[1] || 'المدرسة';
                 const departmentName = info.department || 'القسم';
                 let logoHtml = info.logo
                     ? `<img src="${info.logo}" style="width: 75px; height: 75px; object-fit: contain; display: block; margin: 0 auto;" class="rounded-xl">`
@@ -2819,7 +2526,7 @@
                             <span>التاريخ: ${new Date().toLocaleDateString('ar-IQ')}</span>
                         </div>
                         <div class="flex gap-2">
-                            <button onclick="printReport()" class="bg-slate-900 text-amber-400 px-3 py-1.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 font-black shadow-sm transition-all">
+                            <button onclick="window.print()" class="bg-slate-900 text-amber-400 px-3 py-1.5 rounded-xl flex items-center gap-1.5 hover:bg-slate-800 font-black shadow-sm transition-all">
                                 <i class="fa-solid fa-print"></i> 
                                 <span>طباعة / حفظ PDF</span>
                             </button>
@@ -2981,12 +2688,12 @@
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-600 mb-1">نوع الكشف:</label>
                                 <select id="rep-term-type" onchange="updateTermSpecificGradesReport()" class="w-full bg-slate-50 border p-1.5 rounded-xl text-xs font-bold">
-                                    <option value="t1">الفصل الأول /100</option>
-                                    <option value="midyear">نصف السنة /100</option>
-                                    <option value="t2">الفصل الثاني /100</option>
-                                    <option value="saai">السعي السنوي /100</option>
-                                    <option value="final">الامتحان النهائي /100</option>
-                                    <option value="result">النتيجة النهائية /100</option>
+                                    <option value="t1">الفصل الأول</option>
+                                    <option value="midyear">نصف السنة</option>
+                                    <option value="t2">الفصل الثاني</option>
+                                    <option value="annual">السعي السنوي</option>
+                                    <option value="final">الامتحان النهائي</option>
+                                    <option value="result">النتيجة من 100</option>
                                 </select>
                             </div>
                             <div>
@@ -3093,9 +2800,9 @@
                 `;
                 updateStudentsBySectionReport();
             } 
-            // 8. درجات الشعبة كاملة
+            // 8. درجات الصف والشعبة كاملة
             else if (reportKey === 'grades_by_section') {
-                titleEl.innerText = "كشف درجات الشعبة كاملة";
+                titleEl.innerText = "كشف درجات الصف والشعبة كاملة";
                 iconEl.className = "fa-solid fa-list-ol";
                 bodyEl.innerHTML = getPrintableHeader("rep-grd-stage") + `
                     <div class="no-print mb-2.5 print-hidden-control">
@@ -3112,12 +2819,12 @@
                                 <tr>
                                     <th class="p-1.5 text-center">#</th>
                                     <th class="p-1.5">الاسم</th>
-                                    <th class="p-1.5 text-center">الفصل الأول /100</th>
-                                    <th class="p-1.5 text-center">نصف السنة /100</th>
-                                    <th class="p-1.5 text-center">الفصل الثاني /100</th>
-                                    <th class="p-1.5 text-center">السعي السنوي /100</th>
-                                    <th class="p-1.5 text-center">النهائي /100</th>
-                                    <th class="p-1.5 text-center">النتيجة /100</th>
+                                    <th class="p-1.5 text-center">الفصل الأول</th>
+                                    <th class="p-1.5 text-center">نصف السنة</th>
+                                    <th class="p-1.5 text-center">الفصل الثاني</th>
+                                    <th class="p-1.5 text-center">السعي السنوي</th>
+                                    <th class="p-1.5 text-center">الامتحان النهائي</th>
+                                    <th class="p-1.5 text-center">النتيجة من 100</th>
                                     <th class="p-1.5 text-center">الحالة</th>
                                 </tr>
                             </thead>
@@ -3485,55 +3192,38 @@
 
         // 4. تقرير درجات الفصل المحدد
         function updateTermSpecificGradesReport() {
-            const typeEl = document.getElementById('rep-term-type');
-            const classEl = document.getElementById('rep-term-class');
-            const theadEl = document.getElementById('rep-term-thead');
-            const bodyEl = document.getElementById('term-grades-report-body');
-            if (!typeEl || !classEl || !theadEl || !bodyEl) return;
-            const termType = typeEl.value;
-            const classFilterVal = classEl.value;
+            const termType = document.getElementById('rep-term-type').value;
+            const classFilterVal = document.getElementById('rep-term-class').value;
             const searchKey = getSearchKeyword();
             setPrintHeaderStageLabelUnified('rep-term-stage', classFilterVal);
-
-            const t1Count = Number(appState.gradeSettings.term1MonthsCount) === 2 ? 2 : 3;
-            const t2Count = Number(appState.gradeSettings.term2MonthsCount) === 2 ? 2 : 3;
-            const monthLabels = ['الشهر الأول','الشهر الثاني','الشهر الثالث'];
-            const heads = {
-                t1: [...monthLabels.slice(0, t1Count), 'درجة الفصل الأول /100'],
-                midyear: ['تفصيل نصف السنة','درجة نصف السنة /100'],
-                t2: [...monthLabels.slice(0, t2Count), 'درجة الفصل الثاني /100'],
-                saai: ['الفصل الأول','نصف السنة','الفصل الثاني','السعي السنوي /100'],
-                final: ['السعي السنوي','الامتحان النهائي /100'],
-                result: ['السعي السنوي','الامتحان النهائي','النتيجة /100']
+            const theadEl = document.getElementById('rep-term-thead');
+            const headers = {
+                t1: ['الفصل الأول /100'], midyear: ['نصف السنة /100'], t2: ['الفصل الثاني /100'],
+                annual: ['السعي السنوي /100'], final: ['الامتحان النهائي /100'], result: ['النتيجة /100', 'الحالة']
             };
-            const columns = heads[termType] || heads.result;
-            theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${columns.map(h => `<th class="p-2 text-center">${h}</th>`).join('')}</tr>`;
-
+            const extraHeaders = headers[termType] || headers.result;
+            theadEl.innerHTML = `<tr><th class="p-2 text-center">#</th><th class="p-2">اسم الطالب</th>${extraHeaders.map(item => `<th class="p-2 text-center">${item}</th>`).join('')}</tr>`;
             let filtered = [...appState.students];
             if (classFilterVal !== 'all') {
                 const [cName, sSec, sStudy] = classFilterVal.split(' - ');
-                filtered = filtered.filter(st => (st.class || '').trim() === (cName || '').trim() && (st.section || '').trim() === (sSec || '').trim() && (st.studyType || 'صباحي').trim() === (sStudy || 'صباحي').trim());
+                filtered = filtered.filter(s => normalizeReportValue(s.class) === normalizeReportValue(cName) && normalizeReportValue(s.section) === normalizeReportValue(sSec) && normalizeReportValue(s.studyType || 'صباحي') === normalizeReportValue(sStudy || 'صباحي'));
             }
-            if (searchKey) filtered = filtered.filter(st => (st.name || '').toLowerCase().includes(searchKey));
-            filtered = filterStudentsForReportSubject(filtered);
-            filtered = sortStudentsAlphabetically(filtered);
-
-            const rows = filtered.map((st, i) => {
-                const t1 = getTermGrade(st, 1), mid = getMidyearGrade(st), t2 = getTermGrade(st, 2);
-                const annual = getAnnualEffortGrade(st), final = numericGrade(st.final), result = getFinalResultGrade(st);
+            if (searchKey) filtered = filtered.filter(s => String(s.name || '').toLowerCase().includes(searchKey));
+            filtered = sortStudentsAlphabetically(filterStudentsForReportSubject(filtered));
+            const rows = filtered.map((student, index) => {
                 let values = [];
-                if (termType === 't1') values = [...[st.term1Month1, st.term1Month2, st.term1Month3].slice(0, t1Count), t1];
-                else if (termType === 'midyear') values = [appState.gradeSettings.midyearMode === 'split' ? `تحريري ${formatGrade(st.midyearWritten)} + شفهي ${formatGrade(st.midyearOral)}` : `درجة مباشرة ${formatGrade(st.midyearDirect)}`, mid];
-                else if (termType === 't2') values = [...[st.term2Month1, st.term2Month2, st.term2Month3].slice(0, t2Count), t2];
-                else if (termType === 'saai') values = [t1, mid, t2, annual];
-                else if (termType === 'final') values = [annual, final];
-                else values = [annual, final, result];
-                return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${i+1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(st.name || '')}</td>${values.map(value => `<td class="p-2 text-center font-semibold">${typeof value === 'number' ? formatGrade(value) : value}</td>`).join('')}</tr>`;
+                if (termType === 't1') values = [gradeDisplay(getTerm1Mark(student))];
+                else if (termType === 'midyear') values = [gradeDisplay(getMidyearMark(student))];
+                else if (termType === 't2') values = [gradeDisplay(getTerm2Mark(student))];
+                else if (termType === 'annual') values = [gradeDisplay(getAnnualWorkMark(student))];
+                else if (termType === 'final') values = [gradeDisplay(gradeNumber(getStudentGradeRecord(student).finalExam) || 0)];
+                else { const result = getFinalResultMark(student); values = [gradeDisplay(result), result >= 50 ? 'ناجح' : 'راسب']; }
+                return `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 text-center font-bold">${index + 1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(student.name)}</td>${values.map((value, index) => `<td class="p-2 text-center font-black ${index === 0 ? 'text-indigo-700' : ''}">${escapeHtml(value)}</td>`).join('')}</tr>`;
             }).join('');
-            bodyEl.innerHTML = rows || `<tr><td colspan="${columns.length + 2}" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة</td></tr>`;
+            document.getElementById('term-grades-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة</td></tr>';
         }
 
-                // 5. تقرير المتابعة
+        // 5. تقرير المتابعة
         function updateBehaviorReport() {
             const classFilterVal = document.getElementById('rep-beh-class').value;
             const searchKey = getSearchKeyword();
@@ -3663,36 +3353,32 @@
                     <td class="p-2 font-bold text-slate-800">${s.name}</td>
                 </tr>
             `).join('');
-            document.getElementById('sec-students-report-body').innerHTML = rows || '<tr><td colspan="2" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة في هذا الصف/الشعبة</td></tr>';
+            document.getElementById('sec-students-report-body').innerHTML = rows || '<tr><td colspan="2" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة في هذه الصف/الشعبة</td></tr>';
         }
 
-        // 8. درجات الشعبة كاملة
+        // 8. درجات الصف والشعبة كاملة
         function updateGradesSectionReport() {
-            const classEl = document.getElementById('rep-grd-class');
-            const bodyEl = document.getElementById('grades-sec-report-body');
-            if (!classEl || !bodyEl) return;
-            const classFilterVal = classEl.value;
+            const classFilterVal = document.getElementById('rep-grd-class').value;
             const searchKey = getSearchKeyword();
             setPrintHeaderStageLabelUnified('rep-grd-stage', classFilterVal);
-
             let filtered = [...appState.students];
             if (classFilterVal !== 'all') {
                 const [cName, sSec, sStudy] = classFilterVal.split(' - ');
-                filtered = filtered.filter(st => (st.class || '').trim() === (cName || '').trim() && (st.section || '').trim() === (sSec || '').trim() && (st.studyType || 'صباحي').trim() === (sStudy || 'صباحي').trim());
+                filtered = filtered.filter(student => normalizeReportValue(student.class) === normalizeReportValue(cName) && normalizeReportValue(student.section) === normalizeReportValue(sSec) && normalizeReportValue(student.studyType || 'صباحي') === normalizeReportValue(sStudy || 'صباحي'));
             }
-            if (searchKey) filtered = filtered.filter(st => (st.name || '').toLowerCase().includes(searchKey));
-            filtered = filterStudentsForReportSubject(filtered);
-            filtered = sortStudentsAlphabetically(filtered);
-
-            const rows = filtered.map((st, i) => {
-                const t1 = getTermGrade(st, 1), mid = getMidyearGrade(st), t2 = getTermGrade(st, 2);
-                const annual = getAnnualEffortGrade(st), final = numericGrade(st.final), result = getFinalResultGrade(st), passed = result >= 50;
-                return `<tr class="border-b border-slate-100 text-[10px]"><td class="p-1.5 font-bold text-center">${i+1}</td><td class="p-1.5 font-bold text-slate-800">${escapeHtml(st.name || '')}</td><td class="p-1.5 text-center text-indigo-700">${formatGrade(t1)}</td><td class="p-1.5 text-center text-amber-700">${formatGrade(mid)}</td><td class="p-1.5 text-center text-sky-700">${formatGrade(t2)}</td><td class="p-1.5 text-center text-amber-700 font-bold">${formatGrade(annual)}</td><td class="p-1.5 text-center text-purple-700">${formatGrade(final)}</td><td class="p-1.5 text-center font-black ${passed ? 'text-emerald-700' : 'text-rose-700'} text-xs">${formatGrade(result)}</td><td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded-full font-black text-[9px] ${passed ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300'}">${passed ? 'ناجح' : 'راسب'}</span></td></tr>`;
+            if (searchKey) filtered = filtered.filter(student => String(student.name || '').toLowerCase().includes(searchKey));
+            filtered = sortStudentsAlphabetically(filterStudentsForReportSubject(filtered));
+            const rows = filtered.map((student, index) => {
+                const t1 = getTerm1Mark(student), mid = getMidyearMark(student), t2 = getTerm2Mark(student), annual = getAnnualWorkMark(student);
+                const finalExam = gradeNumber(getStudentGradeRecord(student).finalExam) || 0, result = getFinalResultMark(student), passed = result >= 50;
+                return `<tr class="border-b border-slate-100 text-[10px]"><td class="p-1.5 text-center font-bold">${index + 1}</td><td class="p-1.5 font-bold text-slate-800">${escapeHtml(student.name)}</td><td class="p-1.5 text-center text-indigo-700">${gradeDisplay(t1)}</td><td class="p-1.5 text-center text-violet-700">${gradeDisplay(mid)}</td><td class="p-1.5 text-center text-sky-700">${gradeDisplay(t2)}</td><td class="p-1.5 text-center text-amber-700">${gradeDisplay(annual)}</td><td class="p-1.5 text-center text-purple-700">${gradeDisplay(finalExam)}</td><td class="p-1.5 text-center font-black ${passed ? 'text-emerald-700' : 'text-rose-700'}">${gradeDisplay(result)}</td><td class="p-1.5 text-center"><span class="px-2 py-0.5 rounded-full font-black text-[9px] ${passed ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${passed ? 'ناجح' : 'راسب'}</span></td></tr>`;
             }).join('');
-            bodyEl.innerHTML = rows || '<tr><td colspan="9" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة في التقرير</td></tr>';
+            const tableHead = document.querySelector('#grades-sec-report-body')?.parentElement?.querySelector('thead tr');
+            if (tableHead) tableHead.innerHTML = '<th class="p-1.5 text-center">#</th><th class="p-1.5">اسم الطالب</th><th>الفصل الأول</th><th>نصف السنة</th><th>الفصل الثاني</th><th>السعي السنوي</th><th>النهائي</th><th>النتيجة</th><th>الحالة</th>';
+            document.getElementById('grades-sec-report-body').innerHTML = rows || '<tr><td colspan="9" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة لتقرير الدرجات</td></tr>';
         }
 
-                // تقرير أعلى وأدنى الدرجات حسب المادة والصف/الشعبة.
+        // تقرير أعلى وأدنى الدرجات حسب المادة والصف/الشعبة.
         function updateGradesMinMaxReport() {
             const classEl = document.getElementById('rep-minmax-class');
             const tbody = document.getElementById('grades-minmax-report-body');
@@ -3716,63 +3402,90 @@
 
             const totals = filtered.map(student => ({
                 student,
-                t1: getTermGrade(student, 1),
-                midyear: getMidyearGrade(student),
-                t2: getTermGrade(student, 2),
-                annual: getAnnualEffortGrade(student),
-                final: numericGrade(student.final),
-                total: getFinalResultGrade(student)
+                t1: getTerm1Mark(student),
+                midyear: getMidyearMark(student),
+                t2: getTerm2Mark(student),
+                annual: getAnnualWorkMark(student),
+                total: getFinalResultMark(student)
             })).sort((a, b) => b.total - a.total || String(a.student.name || '').localeCompare(String(b.student.name || ''), 'ar'));
 
             const highest = totals[0];
             const lowest = totals.length ? totals[totals.length - 1] : null;
             summary.innerHTML = totals.length ? `
                 <div class="p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
-                    <p class="text-[10px] font-bold text-emerald-700">أعلى نتيجة نهائية</p>
-                    <p class="text-xs font-black text-emerald-900 mt-1">${escapeHtml(highest.student.name || '')}</p>
-                    <p class="text-sm font-black text-emerald-700 mt-1">${formatGrade(highest.total)} / 100</p>
+                    <p class="text-[10px] font-bold text-emerald-700">أعلى درجة</p>
+                    <p class="text-xs font-black text-emerald-900 mt-1">${highest.student.name}</p>
+                    <p class="text-sm font-black text-emerald-700">${highest.total} / 100</p>
                 </div>
                 <div class="p-3 rounded-2xl bg-rose-50 border border-rose-200">
-                    <p class="text-[10px] font-bold text-rose-700">أدنى نتيجة نهائية</p>
-                    <p class="text-xs font-black text-rose-900 mt-1">${escapeHtml(lowest.student.name || '')}</p>
-                    <p class="text-sm font-black text-rose-700 mt-1">${formatGrade(lowest.total)} / 100</p>
+                    <p class="text-[10px] font-bold text-rose-700">أدنى درجة</p>
+                    <p class="text-xs font-black text-rose-900 mt-1">${lowest.student.name}</p>
+                    <p class="text-sm font-black text-rose-700">${lowest.total} / 100</p>
                 </div>
             ` : `<div class="col-span-2 text-center p-3 rounded-2xl bg-slate-50 text-xs text-slate-500">لا توجد بيانات مطابقة للفلاتر</div>`;
 
             tbody.innerHTML = totals.map((item, index) => `
                 <tr class="border-b border-slate-100 text-[10px]">
                     <td class="p-2 text-center font-bold">${index + 1}</td>
-                    <td class="p-2 font-bold text-slate-800">${escapeHtml(item.student.name || '')}</td>
-                    <td class="p-2">${escapeHtml(item.student.class || '')} - ${escapeHtml(item.student.section || '')}</td>
-                    <td class="p-2">${escapeHtml(item.student.subject || (getSelectedReportSubject() === 'all' ? 'غير محددة' : getSelectedReportSubject()))}</td>
-                    <td class="p-2 text-center font-black ${index === 0 ? 'text-emerald-700' : index === totals.length - 1 ? 'text-rose-700' : 'text-slate-800'}">${formatGrade(item.total)}</td>
+                    <td class="p-2 font-bold text-slate-800">${item.student.name}</td>
+                    <td class="p-2">${item.student.class || ''} - ${item.student.section || ''}</td>
+                    <td class="p-2">${item.student.subject || (getSelectedReportSubject() === 'all' ? 'غير محددة' : getSelectedReportSubject())}</td>
+                    <td class="p-2 text-center font-black ${index === 0 ? 'text-emerald-700' : index === totals.length - 1 ? 'text-rose-700' : 'text-slate-800'}">${item.total}</td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="p-3 text-center text-xs text-slate-400">لا توجد درجات مطابقة</td></tr>';
         }
 
-                // 10. الطلبة الناجحون
+        // 10. الطلبة الناجحون
         function updatePassedReport() {
             setPrintHeaderStageLabelUnified('rep-passed-dummy', 'all');
             const searchKey = getSearchKeyword();
-            let passed = appState.students.filter(st => getFinalResultGrade(st) >= 50 && (!searchKey || String(st.name || '').toLowerCase().includes(searchKey)));
+            let passed = appState.students.filter(s => {
+                let tot = getFinalResultMark(s);
+                return tot >= 50 && (!searchKey || s.name.toLowerCase().includes(searchKey));
+            });
             passed = filterStudentsForReportSubject(passed);
             passed = sortStudentsAlphabetically(passed);
-            const rows = passed.map((st, i) => `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 font-bold text-center">${i+1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(st.name || '')}</td><td class="p-2 text-center font-black text-emerald-700 text-xs">${formatGrade(getFinalResultGrade(st))}</td><td class="p-2 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">ناجح ✓</span></td></tr>`).join('');
-            document.getElementById('grades-passed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة ناجحون</td></tr>';
+
+            let rows = passed.map((s, i) => {
+                let total = getFinalResultMark(s);
+                return `
+                    <tr class="border-b border-slate-100 text-[11px]">
+                        <td class="p-2 font-bold text-center">${i+1}</td>
+                        <td class="p-2 font-bold text-slate-800">${s.name}</td>
+                        <td class="p-2 text-center font-black text-emerald-700 text-xs">${total}</td>
+                        <td class="p-2 text-center"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">ناجح ✓</span></td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('grades-passed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة</td></tr>';
         }
 
-                // 10. الطلبة الراسبون
+        // 10. الطلبة الراسبون
         function updateFailedReport() {
             setPrintHeaderStageLabelUnified('rep-failed-dummy', 'all');
             const searchKey = getSearchKeyword();
-            let failed = appState.students.filter(st => getFinalResultGrade(st) < 50 && (!searchKey || String(st.name || '').toLowerCase().includes(searchKey)));
+            let failed = appState.students.filter(s => {
+                let tot = getFinalResultMark(s);
+                return tot < 50 && (!searchKey || s.name.toLowerCase().includes(searchKey));
+            });
             failed = filterStudentsForReportSubject(failed);
             failed = sortStudentsAlphabetically(failed);
-            const rows = failed.map((st, i) => `<tr class="border-b border-slate-100 text-[11px]"><td class="p-2 font-bold text-center">${i+1}</td><td class="p-2 font-bold text-slate-800">${escapeHtml(st.name || '')}</td><td class="p-2 text-center font-black text-rose-700 text-xs">${formatGrade(getFinalResultGrade(st))}</td><td class="p-2 text-center"><span class="px-2 py-0.5 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">راسب ✗</span></td></tr>`).join('');
-            document.getElementById('grades-failed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة راسبون</td></tr>';
+
+            let rows = failed.map((s, i) => {
+                let total = getFinalResultMark(s);
+                return `
+                    <tr class="border-b border-slate-100 text-[11px]">
+                        <td class="p-2 font-bold text-center">${i+1}</td>
+                        <td class="p-2 font-bold text-slate-800">${s.name}</td>
+                        <td class="p-2 text-center font-black text-rose-700 text-xs">${total}</td>
+                        <td class="p-2 text-center"><span class="px-2 py-0.5 bg-rose-100 text-rose-800 font-bold rounded-full text-[10px]">راسب ✗</span></td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('grades-failed-report-body').innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-xs text-slate-400">لا يوجد طلبة راسبين</td></tr>';
         }
 
-                // إحصائيات التقارير: الأولوية لجلسات الحضور المحفوظة، مع دعم سجلات الطلبة القديمة.
+        // إحصائيات التقارير: الأولوية لجلسات الحضور المحفوظة، مع دعم سجلات الطلبة القديمة.
         function getStudentAbsenceMetrics(student, subjectName = 'all', classFilterVal = 'all', fromDate = '', toDate = '') {
             const pickedSubject = subjectName || 'all';
             const sessionMetrics = getReportSessionMetrics(student, pickedSubject, classFilterVal, fromDate, toDate);
@@ -4117,7 +3830,6 @@
         function triggerAction(actionKey) {
             const modalSubmit = document.getElementById('modal-submit-btn');
             if (modalSubmit) modalSubmit.style.display = '';
-            if (modalSubmit && (actionKey === 'backup_restore' || actionKey === 'backup_data')) modalSubmit.style.display = 'none';
             currentModalType = actionKey;
             const modal = document.getElementById('action-modal');
             const box = document.getElementById('modal-box');
@@ -4130,7 +3842,7 @@
             box.classList.add('scale-100');
 
             if (actionKey === 'add_class') {
-                titleEl.innerText = "إدارة الصفوف والشعب المدرسية";
+                titleEl.innerText = "إدارة الصفوف والشعب الأكاديمية";
                 iconEl.className = "fa-solid fa-layer-group";
                 renderClassesManagement(bodyEl);
             } 
@@ -4150,6 +3862,11 @@
                             <select id="inp-std-class" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none focus:border-slate-900 font-bold">
                                 ${classDropdowns}
                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">رقم واتساب (اختياري):</label>
+                            <input id="inp-std-whatsapp" type="tel" inputmode="tel" placeholder="مثال: 07701234567" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none focus:border-slate-900 font-bold" dir="ltr">
+                            <p class="text-[9px] text-slate-400 mt-1">يظهر في قائمة الطلبة فقط ولا يُدرج في التقارير أو أوراق الطباعة.</p>
                         </div>
                     </div>
                 `;
@@ -4219,42 +3936,36 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-600 mb-1">القاعة الدراسية:</label>
-                            <input id="sch-hall" type="text" placeholder="مثال: قاعة الصف الأول" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none">
+                            <input id="sch-hall" type="text" placeholder="مثال: قاعة الخوارزمي" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none">
                         </div>
                     </div>
                 `;
                 updateScheduleSubjectOptions();
             } 
             else if (actionKey === 'edit_school_info') {
-                titleEl.innerText = "تعديل بيانات المدرسة والمعلم والعام الدراسي";
+                titleEl.innerText = "تعديل بيانات المدرسة والمدرس والعام الدراسي";
                 iconEl.className = "fa-solid fa-pen-to-square";
                 
                 bodyEl.innerHTML = `
                     <div class="space-y-3">
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المدرسة (يظهر في واجهة البرنامج):</label>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المدرسة:</label>
                             <input id="inp-sch-name" type="text" value="${appState.schoolInfo.name}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
                         </div>
-                        <div class="grid grid-cols-1 gap-2">
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم مديرية التربية (يظهر في رأس الطباعة):</label>
-                                <input id="inp-sch-university" type="text" value="${appState.schoolInfo.university || 'مديرية تربية بغداد'}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المدرسة في رأس الطباعة:</label>
-                                <input id="inp-sch-college" type="text" value="${appState.schoolInfo.college || 'مدرسة بغداد'}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
-                            </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المدرس:</label>
+                            <input id="inp-sch-teacher" type="text" value="${appState.schoolInfo.teacher}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المعلم:</label>
-                            <input id="inp-sch-teacher" type="text" value="${appState.schoolInfo.teacher}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">المادة الدراسية الأساسية:</label>
+                            <input id="inp-sch-subj" type="text" value="${appState.schoolInfo.subject}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-600 mb-1">العام الدراسي:</label>
                             <input id="inp-sch-year" type="text" value="${appState.schoolInfo.year}" placeholder="مثال: 2025 - 2026" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold text-slate-800">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-bold text-slate-600 mb-1">شعار المدرسة (يظهر في جميع التقارير وأوراق الطباعة):</label>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">شعار المدرسة (يظهر في التقارير وأوراق الطباعة):</label>
                             <div class="flex items-center gap-3">
                                 <div id="logo-preview-box" class="w-12 h-12 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
                                     ${appState.schoolInfo.logo ? `<img src="${appState.schoolInfo.logo}" class="w-full h-full object-contain">` : `<i class="fa-solid fa-image text-slate-300"></i>`}
@@ -4267,66 +3978,44 @@
                         </div>
                     </div>
                 `;
-            } else if (actionKey === 'edit_google_config') {
-                titleEl.innerText = "الربط السحابي مع حساب Google Drive";
-                iconEl.className = "fa-brands fa-google-drive";
-                bodyEl.innerHTML = `
-                    <div class="space-y-3">
-                        <div class="rounded-2xl border border-blue-100 bg-blue-50 p-3">
-                            <div class="flex items-center gap-2 mb-1"><i class="fa-brands fa-google-drive text-blue-600"></i><strong class="text-xs text-slate-800">نسخ احتياطي سحابي لحظي</strong></div>
-                            <p class="text-[10px] leading-relaxed text-slate-600">يُحفظ ملف بيانات المنظومة داخل مساحة التطبيق الخاصة في Google Drive، ولا يُشارك مع الآخرين. عند إعادة الربط يمكنك استعادة النسخة السحابية. يعمل هذا الخيار بصورة مستقلة عن الحفظ المحلي على الجهاز.</p>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Google OAuth Client ID</label>
-                            <input id="google-client-id-input" type="text" dir="ltr" value="${(appState.googleConfig && appState.googleConfig.clientId) || ''}" placeholder="1234567890-xxxxx.apps.googleusercontent.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold">
-                            <p class="text-[9px] text-slate-500 mt-1 leading-relaxed">يلزم إنشاء OAuth Client ID من Google Cloud Console وتفعيل Google Drive API وإضافة عنوان تشغيل الملف ضمن Authorized JavaScript origins.</p>
-                        </div>
-                        <div class="text-[10px] text-slate-600 flex items-center gap-2"><span class="w-2 h-2 rounded-full ${(appState.googleConfig && appState.googleConfig.connected) ? 'bg-emerald-500' : 'bg-slate-300'}"></span><span id="google-drive-modal-status">${(appState.googleConfig && appState.googleConfig.connected) ? 'Google Drive متصل في هذه الجلسة' : 'Google Drive غير متصل حالياً'}</span></div>
-                        <button onclick="connectGoogleDrive()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-blue-700 flex items-center justify-center gap-2"><i class="fa-brands fa-google"></i><span>ربط حساب Google واستعادة البيانات</span></button>
-                        <button onclick="syncGoogleDriveNow()" class="w-full bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-2"><i class="fa-solid fa-rotate"></i><span>مزامنة البيانات الآن</span></button>
-                        <button onclick="disconnectGoogleDrive()" class="w-full bg-slate-100 text-slate-600 py-2 rounded-xl font-bold text-[10px] hover:bg-slate-200">قطع الاتصال بهذه الجلسة</button>
-                    </div>
-                `;
-            } else if (actionKey === 'backup_restore') {
-                titleEl.innerText = "نسخة احتياطية واستعادة البيانات";
-                iconEl.className = "fa-solid fa-box-archive";
-                bodyEl.innerHTML = `
-                    <div class="space-y-4 p-1">
-                        <div class="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3">
-                            <div class="flex items-center gap-2 mb-1"><i class="fa-solid fa-download text-emerald-600"></i><strong class="text-xs text-slate-800">إنشاء نسخة احتياطية</strong></div>
-                            <p class="text-[10px] text-slate-600 leading-relaxed mb-3">تنزيل ملف JSON يتضمن بيانات المدرسة والطلبة والصفوف والدرجات والحضور والغياب والإعدادات.</p>
-                            <button type="button" onclick="downloadLocalBackupJSON()" class="w-full bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-2"><i class="fa-solid fa-file-export"></i><span>تنزيل النسخة الاحتياطية</span></button>
-                        </div>
-                        <div class="rounded-2xl border border-blue-100 bg-blue-50/60 p-3">
-                            <div class="flex items-center gap-2 mb-1"><i class="fa-solid fa-file-import text-blue-600"></i><strong class="text-xs text-slate-800">استعادة نسخة سابقة</strong></div>
-                            <p class="text-[10px] text-slate-600 leading-relaxed mb-3">اختر ملف نسخة احتياطية بصيغة JSON. ستُستبدل البيانات الحالية بالبيانات الموجودة في الملف بعد تأكيد العملية.</p>
-                            <label for="restore-backup-file" class="block w-full text-center cursor-pointer bg-blue-600 text-white py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-blue-700"><i class="fa-solid fa-folder-open ml-1"></i> اختيار ملف النسخة الاحتياطية</label>
-                            <input id="restore-backup-file" type="file" accept=".json,application/json" class="hidden" onchange="restoreLocalBackupJSON(event)">
-                            <p class="text-[9px] text-slate-500 mt-2">تنبيه: يُفضّل تنزيل نسخة من البيانات الحالية قبل الاستعادة.</p>
-                        </div>
-                    </div>
-                `;
             } else if (actionKey === 'backup_data') {
-                titleEl.innerText = "النسخ الاحتياطي المحلي";
-                iconEl.className = "fa-solid fa-file-export";
-
+                titleEl.innerText = "تصدير أو استرجاع نسخة احتياطية";
+                iconEl.className = "fa-solid fa-file-arrow-down";
                 bodyEl.innerHTML = `
-                    <div class="space-y-3.5 text-center p-3">
-                        <i class="fa-solid fa-cloud-arrow-down text-4xl text-amber-500 mb-2"></i>
-                        <h4 class="font-extrabold text-xs text-slate-800">حفظ نسخة احتياطية محلية (JSON)</h4>
-                        <p class="text-[10px] text-slate-500 leading-relaxed font-medium">
-                            يمكنك تنزيل ملف يحتوي على كل بيانات المنظومة والدرجات وسجلات الحضور والغياب للرجوع إليها في أي وقت.
-                        </p>
-                        <button onclick="downloadLocalBackupJSON()" class="w-full bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-download"></i>
-                            <span>تنزيل ملف النسخة الاحتياطية</span>
-                        </button>
-                    </div>
-                `;
+                    <div class="space-y-3.5 p-2">
+                        <div class="text-center">
+                            <i class="fa-solid fa-box-archive text-4xl text-amber-500 mb-2"></i>
+                            <h4 class="font-extrabold text-xs text-slate-800">النسخة الاحتياطية المحلية</h4>
+                            <p class="text-[10px] text-slate-500 leading-relaxed mt-1">يتضمن الملف الطلبة والصفوف والمواد والدرجات والحضور والغياب والجدول والإعدادات.</p>
+                        </div>
+                        <button type="button" onclick="downloadLocalBackupJSON()" class="w-full bg-slate-900 text-amber-400 py-2.5 rounded-xl font-black text-xs shadow-md hover:bg-slate-800 flex items-center justify-center gap-1.5"><i class="fa-solid fa-download"></i><span>تصدير نسخة احتياطية</span></button>
+                        <div class="rounded-2xl border border-sky-100 bg-sky-50 p-3 space-y-2">
+                            <label class="block text-[10px] font-bold text-slate-700">اختيار ملف نسخة احتياطية لاسترجاعه:</label>
+                            <input id="restore-backup-file" type="file" accept=".json,application/json" onchange="restoreLocalBackup(this)" class="w-full text-[10px] text-slate-600 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-slate-900 file:text-amber-400 cursor-pointer">
+                            <p class="text-[9px] leading-relaxed text-slate-500">سيطلب البرنامج تأكيداً قبل استبدال البيانات الحالية ببيانات الملف.</p>
+                        </div>
+                    </div>`;
+                const submit = document.getElementById('modal-submit-btn');
+                if (submit) submit.style.display = 'none';
+            } else if (actionKey === 'delete_all_data') {
+                titleEl.innerText = "تحذير: حذف جميع البيانات";
+                iconEl.className = "fa-solid fa-triangle-exclamation";
+                bodyEl.innerHTML = `
+                    <div class="space-y-3 text-center p-3">
+                        <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center text-2xl"><i class="fa-solid fa-trash-can"></i></div>
+                        <h4 class="font-black text-sm text-rose-700">هل أنت متأكد من حذف جميع البيانات؟</h4>
+                        <p class="text-[10px] leading-relaxed text-slate-600">سيتم حذف الطلبة والصفوف والمواد والدرجات وسجلات الحضور والغياب والجدول وبيانات المدرسة. لا يمكن التراجع عن هذا الإجراء. يُنصح بتصدير نسخة احتياطية أولاً.</p>
+                        <div class="flex gap-2 pt-1">
+                            <button type="button" onclick="deleteAllProgramData()" class="flex-1 bg-rose-600 text-white py-2.5 rounded-xl font-black text-xs hover:bg-rose-700">تأكيد الحذف</button>
+                            <button type="button" onclick="closeModal()" class="flex-1 bg-slate-100 text-slate-700 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-200">إلغاء</button>
+                        </div>
+                    </div>`;
+                const submit = document.getElementById('modal-submit-btn');
+                if (submit) submit.style.display = 'none';
             } else {
                 titleEl.innerText = "معلومات المنظومة";
                 iconEl.className = "fa-solid fa-circle-info";
-                bodyEl.innerHTML = `<div class="text-center py-4"><p class="text-xs text-slate-600">المنظومة جاهزة لإدارة بيانات المدرسة وحفظها محلياً.</p></div>`;
+                bodyEl.innerHTML = `<div class="text-center py-4"><p class="text-xs text-slate-600">هذا القسم مخصص لإدارة بيانات المدرسة.</p></div>`;
             }
         }
 
@@ -4362,7 +4051,7 @@
             container.innerHTML = `
                 <div class="space-y-3">
                     <div class="p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl">
-                        <h4 class="font-black text-xs text-indigo-950 mb-2">إضافة صف وشعبة جديد:</h4>
+                        <h4 class="font-black text-xs text-indigo-950 mb-2">إضافة صف وشعبة جديدة:</h4>
                         <div class="grid grid-cols-3 gap-1.5">
                             <div>
                                 <label class="block text-[9px] font-bold text-slate-600 mb-1">الصف:</label>
@@ -4389,7 +4078,7 @@
                                 </select>
                                 <button type="button" onclick="appendClassSubject('inp-class-subjects','inp-class-subject-picker')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-black">إضافة</button>
                             </div>
-                            <label class="block text-[9px] font-bold text-slate-600 mb-1">المواد الدراسية التابعة لهذا الصف والشعبة ونوع الدراسة:</label>
+                            <label class="block text-[9px] font-bold text-slate-600 mb-1">المواد الدراسية التابعة لهذه الصف والشعبة والدراسة:</label>
                             <textarea id="inp-class-subjects" rows="2" placeholder="أسماء المواد، وافصل بينها بفاصلة أو سطر جديد" class="w-full bg-white border border-slate-200 rounded-xl p-2 text-xs outline-none font-bold resize-y"></textarea>
                             <p class="text-[9px] text-slate-500 mt-1">يمكن اختر المواد المسجلة في تبويب إضافة مادة دراسية فقط؛ لا تُنشئ المادة هنا. سيظهر الربط في قوائم الحضور والجدول والدرجات والتقارير.</p>
                         </div>
@@ -4415,7 +4104,7 @@
                 </div>
                 <div class="space-y-2.5">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم الصف الدراسي:</label>
+                        <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم الصف:</label>
                         <input id="edit-cls-name" type="text" value="${escapeHtml(cls.name)}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none">
                     </div>
                     <div>
@@ -4468,7 +4157,7 @@
                 normalizeAcademicText(other.section) === normalizeAcademicText(newSec) &&
                 normalizeAcademicText(other.studyType || 'صباحي') === normalizeAcademicText(newStudy));
             if (duplicate) {
-                showToast("هذا الصف والشعبة ونوع الدراسة مسجلة مسبقاً", "error");
+                showToast("هذه الصف والشعبة ونوع الدراسة مسجلة مسبقاً", "error");
                 return;
             }
 
@@ -4516,7 +4205,7 @@
             });
 
             applyClassSubjectNames(cls, subjectNames);
-            saveAppState();
+            persistLocalState();
             showToast("تم تعديل الصف والشعبة والدراسة والمواد المرتبطة بها بنجاح!");
             triggerAction('add_class');
             updateStatsBar();
@@ -4524,7 +4213,7 @@
         }
 
         function deleteClassItem(classId) {
-            if (!confirm("هل أنت متأكد من رغبتك في حذف هذا الصف والشعبة؟")) return;
+            if (!confirm("هل أنت متأكد من رغبتك في حذف هذه الصف والشعبة؟")) return;
             const deletedClass = appState.classes.find(c => c.id === classId);
             if (deletedClass) {
                 appState.subjects = appState.subjects.filter(subject =>
@@ -4536,7 +4225,7 @@
                 appState.schedule = appState.schedule.filter(item => String(item.className || '').trim() !== deletedScheduleName);
             }
             appState.classes = appState.classes.filter(c => c.id !== classId);
-            saveAppState();
+            persistLocalState();
             showToast("تم حذف الصف والشعبة والمواد المرتبطة بها بنجاح!");
             triggerAction('add_class');
             updateStatsBar();
@@ -4544,6 +4233,15 @@
         }
 
         // 2. إدارة الطلبة المسجلين مع البحث الفوري بالاسم
+        function openStudentWhatsApp(phone) {
+            let digits = String(phone || '').replace(/\D/g, '');
+            if (digits.startsWith('00')) digits = digits.slice(2);
+            if (digits.startsWith('0')) digits = '964' + digits.slice(1);
+            else if (digits.startsWith('7')) digits = '964' + digits;
+            if (!digits) { showToast('رقم واتساب غير صالح', 'error'); return; }
+            window.open(`https://wa.me/${digits}`, '_blank', 'noopener,noreferrer');
+        }
+
         function normalizeStudentSearchText(value) {
             return String(value || '')
                 .toLocaleLowerCase('ar')
@@ -4564,9 +4262,10 @@
                         <span class="registered-student-index w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-bold flex items-center justify-center">${idx + 1}</span>
                         <div>
                             <h5 class="font-extrabold text-xs text-slate-800">${s.name}</h5>
-                            <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 font-medium">
-                                <span><i class="fa-solid fa-layer-group text-indigo-500"></i> ${s.class} (${s.section})</span>
-                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.2 rounded-md font-bold">${s.studyType || 'صباحي'}</span>
+                            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[10px] text-slate-500 font-medium">
+                                <span><i class="fa-solid fa-layer-group text-indigo-500"></i> ${escapeHtml(s.class)} (${escapeHtml(s.section)})</span>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.2 rounded-md font-bold">${escapeHtml(s.studyType || 'صباحي')}</span>
+                                ${s.whatsapp ? `<button type="button" onclick="openStudentWhatsApp('${String(s.whatsapp).replace(/'/g, '')}')" class="text-emerald-700 font-black hover:text-emerald-900"><i class="fa-brands fa-whatsapp"></i> ${escapeHtml(s.whatsapp)}</button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -4639,7 +4338,7 @@
             if (!confirm(`هل أنت متأكد من رغبتك في حذف الطالب (${s.name}) نهائياً من النظام؟`)) return;
 
             appState.students = appState.students.filter(st => st.id !== studentId);
-            saveAppState();
+            persistLocalState();
             showToast("تم حذف قيد الطالب بنجاح!");
             triggerAction('manage_registered_students');
             updateStatsBar();
@@ -4669,6 +4368,10 @@
                             ${classOptions}
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-600 mb-1">رقم واتساب (اختياري):</label>
+                        <input id="edit-std-whatsapp" type="tel" inputmode="tel" dir="ltr" value="${escapeHtml(s.whatsapp || '')}" placeholder="07701234567" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none">
+                    </div>
                     <div class="pt-2 flex gap-2">
                         <button onclick="saveUpdatedStudentData(${s.id})" class="flex-1 bg-emerald-600 text-white py-2 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-700">حفظ التعديلات</button>
                         <button onclick="triggerAction('manage_registered_students')" class="bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-bold text-xs">إلغاء</button>
@@ -4692,8 +4395,9 @@
             s.class = className.trim();
             s.section = (sectionPart || "أ").trim();
             s.studyType = (studyPart || "صباحي").trim();
+            s.whatsapp = String((document.getElementById('edit-std-whatsapp') || {}).value || '').trim();
 
-            saveAppState();
+            persistLocalState();
             showToast("تم تعديل بيانات الطالب بنجاح!");
             triggerAction('manage_registered_students');
             renderContent();
@@ -4733,8 +4437,8 @@
                         <h4 class="font-black text-xs text-rose-950 mb-2">إضافة مادة دراسية جديدة:</h4>
                         <div class="space-y-2">
                             <div>
-                                <label class="block text-[9px] font-bold text-slate-600 mb-1">اسم المادة الدراسية:</label>
-                                <input id="inp-sub-name" type="text" placeholder="مثال: العلوم" class="w-full bg-white border border-slate-200 rounded-xl p-1.5 text-xs outline-none font-bold">
+                                <label class="block text-[9px] font-bold text-slate-600 mb-1">اسم المادة المدرسية:</label>
+                                <input id="inp-sub-name" type="text" placeholder="مثال: تراكيب البيانات" class="w-full bg-white border border-slate-200 rounded-xl p-1.5 text-xs outline-none font-bold">
                             </div>
                             <button type="button" onclick="addSubjectToCatalog()" class="w-full bg-rose-600 text-white py-2 rounded-xl text-xs font-black hover:bg-rose-700"><i class="fa-solid fa-plus ml-1"></i>إضافة المادة إلى القائمة</button>
                             <p class="text-[9px] text-slate-500">تُضاف المادة إلى سجل المواد العام فقط، ولا تُربط بصف أو شعبة هنا. يتم تحديد الشعب والمواد الخاصة بها من تبويب إدارة الصفوف والشعب.</p>
@@ -4757,7 +4461,7 @@
             if (!Array.isArray(appState.subjectCatalog)) appState.subjectCatalog = [];
             appState.subjectCatalog.push({ id: Date.now() + Math.random(), name, teacher: (appState.schoolInfo && appState.schoolInfo.teacher) || '' });
             appState.subjectCatalog.sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-            saveAppState();
+            persistLocalState();
             showToast('تمت إضافة المادة إلى سجل المواد العام. اربطها بالشعب من إدارة الصفوف والشعب.');
             updateStatsBar();
             triggerAction('add_subject');
@@ -4775,7 +4479,7 @@
                 </div>
                 <div class="space-y-2.5">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المادة الدراسية:</label>
+                        <label class="block text-[10px] font-bold text-slate-600 mb-1">اسم المادة المدرسية:</label>
                         <input id="edit-sub-name" type="text" value="${escapeHtml(sub.name)}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-bold outline-none">
                         <p class="text-[9px] text-slate-500 mt-1">تعديل الاسم يحدّث ربط المادة بالشعب والقوائم والتقارير والسجلات المرتبطة بها.</p>
                     </div>
@@ -4817,7 +4521,7 @@
                 if (!assignments.has(key)) assignments.set(key, item);
             });
             appState.subjects = Array.from(assignments.values());
-            saveAppState();
+            persistLocalState();
             showToast('تم تعديل اسم المادة وتحديث ارتباطاتها بنجاح');
             updateStatsBar();
             triggerAction('add_subject');
@@ -4834,8 +4538,8 @@
             appState.subjectCatalog = (appState.subjectCatalog || []).filter(item => String(item.id) !== String(subjectId));
             appState.subjects = (appState.subjects || []).filter(item => normalizeAcademicText(item.name) !== key);
             appState.schedule = (appState.schedule || []).filter(item => normalizeAcademicText(item && item.subject) !== key);
-            // لا نحذف الدرجات أو سجلات الحضور/السلوك التاريخية، حتى لا تضيع البيانات المدرسية المحفوظة.
-            saveAppState();
+            // لا نحذف الدرجات أو سجلات الحضور/السلوك التاريخية، حتى لا تضيع البيانات الأكاديمية المحفوظة.
+            persistLocalState();
             showToast('تم حذف المادة من القائمة والارتباطات النشطة');
             updateStatsBar();
             triggerAction('add_subject');
@@ -4850,6 +4554,7 @@
             modal.classList.add('opacity-0', 'pointer-events-none');
             box.classList.remove('scale-100');
             box.classList.add('scale-95');
+            currentModalType = '';
         }
 
         function handleModalSubmit() {
@@ -4862,7 +4567,7 @@
                 const duplicate = appState.classes.some(cls => normalizeAcademicText(cls.name) === normalizeAcademicText(name) &&
                     normalizeAcademicText(cls.section) === normalizeAcademicText(section) &&
                     normalizeAcademicText(cls.studyType || 'صباحي') === normalizeAcademicText(studyType));
-                if (duplicate) { showToast("هذا الصف والشعبة ونوع الدراسة مسجلة مسبقاً", "error"); return; }
+                if (duplicate) { showToast("هذه الصف والشعبة ونوع الدراسة مسجلة مسبقاً", "error"); return; }
                 const newClass = { id: Date.now(), name, section, studyType, count: 0 };
                 appState.classes.push(newClass);
                 applyClassSubjectNames(newClass, subjectNames);
@@ -4879,12 +4584,13 @@
                     class: className, 
                     section: sectionPart || "أ", 
                     studyType: studyPart || "صباحي",
-                    year: appState.schoolInfo.year, 
-                    behavior: "جديد", 
-                    note: "طالب مسجل حديثًا", 
-                    t1Exam: 0, t1Eval: 0,
-                    t2Exam: 0, t2Eval: 0,
-                    final: 0,
+                    year: appState.schoolInfo.year,
+                    whatsapp: String((document.getElementById('inp-std-whatsapp') || {}).value || '').trim(),
+                    behavior: "جديد",
+                    note: "طالب مسجل حديثًا",
+                    term1Month1: "", term1Month2: "", term1Month3: "",
+                    midyearMode: "direct", midyearDirect: "", midyearWritten: "", midyearOral: "", midyearMonth1: "", midyearMonth2: "",
+                    term2Month1: "", term2Month2: "", term2Month3: "", finalExam: "",
                     attendanceCount: 0, 
                     absenceCount: 0,
                     excusedCount: 0,
@@ -4922,37 +4628,32 @@
                     time: time, 
                     hall: hall 
                 });
-                showToast("تمت إضافة الدرس إلى الجدول وربطه بالمادة والشعبة");
+                showToast("تمت إضافة الدرس للجدول وربطها بالمادة والشعبة");
             } 
             else if (currentModalType === 'edit_school_info') {
                 // تهيئة كائن البيانات وضمان قراءة جميع الحقول الظاهرة في النموذج قبل الحفظ.
                 if (!appState.schoolInfo || typeof appState.schoolInfo !== 'object') appState.schoolInfo = {};
                 const schoolNameInput = document.getElementById('inp-sch-name');
-                const universityInput = document.getElementById('inp-sch-university');
-                const collegeInput = document.getElementById('inp-sch-college');
+                const departmentInput = document.getElementById('inp-sch-department');
                 const teacherInput = document.getElementById('inp-sch-teacher');
+                const subjectInput = document.getElementById('inp-sch-subj');
                 const yearInput = document.getElementById('inp-sch-year');
 
                 if (schoolNameInput) appState.schoolInfo.name = schoolNameInput.value.trim() || appState.schoolInfo.name || '';
-                if (universityInput) appState.schoolInfo.university = universityInput.value.trim();
-                if (collegeInput) appState.schoolInfo.college = collegeInput.value.trim();
+                appState.schoolInfo.university = "";
+                appState.schoolInfo.college = "";
+                if (departmentInput) appState.schoolInfo.department = departmentInput.value.trim();
                 if (teacherInput) appState.schoolInfo.teacher = teacherInput.value.trim() || appState.schoolInfo.teacher || '';
+                if (subjectInput) appState.schoolInfo.subject = subjectInput.value.trim() || appState.schoolInfo.subject || '';
                 if (yearInput) appState.schoolInfo.year = yearInput.value.trim() || appState.schoolInfo.year || '';
 
-                // تُحفظ التعديلات محلياً، وتُزامن مع Google Drive فقط عند ربط الحساب.
-                showToast("تم حفظ بيانات المدرسة والمعلم بنجاح");
-            } else if (currentModalType === 'edit_google_config') {
-                const clientInput = document.getElementById('google-client-id-input');
-                if (clientInput) appState.googleConfig.clientId = clientInput.value.trim();
-                if (!appState.googleConfig) appState.googleConfig = { clientId: "", connected: false, fileId: "" };
-                saveAppState();
-                updateGoogleDriveStatus();
-                showToast("تم حفظ إعدادات الربط مع Google");
+                // تتم الكتابة للحفظ المحلي ومزامنة الخدمات المحلية مباشرة بعد انتهاء هذا الفرع.
+                showToast("تم حفظ بيانات المدرسة والقسم والمدرس بنجاح");
             } else {
                 showToast("تم حفظ التعديلات بنجاح");
             }
 
-            saveAppState();
+            persistLocalState();
             closeModal();
             updateStatsBar();
             renderContent();
@@ -4978,9 +4679,9 @@
                         year: appState.schoolInfo.year,
                         behavior: "مميز",
                         note: "مستورد",
-                        t1Exam: 0, t1Eval: 0,
-                        t2Exam: 0, t2Eval: 0,
-                        final: 0,
+                        term1Month1: "", term1Month2: "", term1Month3: "",
+                        midyearMode: "direct", midyearDirect: "", midyearWritten: "", midyearOral: "", midyearMonth1: "", midyearMonth2: "",
+                        term2Month1: "", term2Month2: "", term2Month3: "", finalExam: "",
                         attendanceCount: 0, absenceCount: 0, excusedCount: 0,
                         absenceLog: [],
                         behaviorLog: []
@@ -4988,7 +4689,7 @@
                     added++;
                 }
             });
-            saveAppState();
+            persistLocalState();
             showToast(`تم استيراد ${added} طالباً بنجاح!`);
             closeModal();
             updateStatsBar();
@@ -4997,7 +4698,7 @@
 
         function deleteScheduleItem(itemId) {
             appState.schedule = appState.schedule.filter(s => s.id !== itemId);
-            saveAppState();
+            persistLocalState();
             showToast("تم حذف الدرس من الجدول");
             renderContent();
         }
@@ -5040,65 +4741,12 @@
                         box.innerHTML = `<img src="${optimizedLogo}" class="w-full h-full object-contain">`;
                     }
                     updateStatsBar();
-                    saveAppState();
+                    persistLocalState();
                     showToast("تم حفظ وضغط الشعار بنجاح!");
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
-        }
-
-        function downloadLocalBackupJSON() {
-            try {
-                const backupState = JSON.stringify(appState, null, 2);
-                const blob = new Blob([backupState], { type: 'application/json;charset=utf-8' });
-                const objectUrl = URL.createObjectURL(blob);
-                const downloadAnchor = document.createElement('a');
-                downloadAnchor.href = objectUrl;
-                downloadAnchor.download = `school_backup_${new Date().toISOString().slice(0, 10)}.json`;
-                document.body.appendChild(downloadAnchor);
-                downloadAnchor.click();
-                downloadAnchor.remove();
-                setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
-                showToast('تم تنزيل ملف النسخة الاحتياطية بنجاح');
-            } catch (error) {
-                console.error('Backup export error:', error);
-                showToast('تعذر إنشاء النسخة الاحتياطية', 'error');
-            }
-        }
-
-        async function restoreLocalBackupJSON(event) {
-            const file = event && event.target && event.target.files && event.target.files[0];
-            if (!file) return;
-            try {
-                const rawText = await file.text();
-                const importedState = JSON.parse(rawText);
-                if (!importedState || typeof importedState !== 'object' ||
-                    !Array.isArray(importedState.students) || !Array.isArray(importedState.classes)) {
-                    throw new Error('ملف النسخة الاحتياطية لا يحتوي على بيانات مدرسة صالحة');
-                }
-                if (!window.confirm('سيتم استبدال البيانات الحالية بالبيانات الموجودة في النسخة الاحتياطية. هل تريد المتابعة؟')) {
-                    event.target.value = '';
-                    return;
-                }
-
-                const currentGoogleConfig = { clientId: '', connected: false, fileId: '', ...(appState.googleConfig || {}) };
-                appState = importedState;
-                appState.googleConfig = currentGoogleConfig;
-                appState.googleConfig.connected = false;
-                googleAccessToken = null;
-                normalizeAppState();
-                saveAppState();
-                updateStatsBar();
-                renderContent();
-                closeModal();
-                showToast('تمت استعادة النسخة الاحتياطية بنجاح');
-            } catch (error) {
-                console.error('Backup restore error:', error);
-                showToast('تعذرت الاستعادة: تأكد من اختيار ملف JSON صحيح صادر من البرنامج', 'error');
-            } finally {
-                if (event && event.target) event.target.value = '';
-            }
         }
 
         function showToast(msg, type = "success") {
@@ -5118,26 +4766,21 @@
                 if (cached) {
                     const parsed = JSON.parse(cached);
                     if (parsed && parsed.students) {
-                                const googleCfg = parsed.googleConfig || appState.googleConfig || { clientId: "", connected: false, fileId: "" };
                         appState = parsed;
-                        appState.googleConfig = googleCfg;
+                        delete appState.supabaseConfig;
+                        delete appState.googleConfig;
                         normalizeAppState();
                     }
                 }
             } catch(e) {
-                console.warn("Local storage cache read error:", e);
+                console.warn('Local storage cache read error:', e);
             }
 
             normalizeAppState();
-            // access tokens are memory-only; the user may reconnect from Settings to restore the Drive backup.
-            if (appState.googleConfig) appState.googleConfig.connected = false;
-            // حفظ الترحيل المحلي الجديد مباشرة حتى لا تعود البيانات القديمة إلى نمط الربط السابق عند إعادة فتح الملف.
-            persistLocalState();
+            // Display cached data immediately; cloud data replaces it only after a successful read.
+            persistLocalState({ syncCloud: false });
             switchTab(1);
-            // الاتصال تلقائياً بالإعدادات المرفقة، ويمكن إعادة المحاولة من تبويب الإعدادات.
-            if (appState.supabaseConfig?.url && appState.supabaseConfig?.key) {
-                setTimeout(() => connectSupabase(), 350);
-            }
+            initializeSupabaseSync();
         };
     </script>
 </body>
