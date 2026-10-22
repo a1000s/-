@@ -3269,7 +3269,31 @@
                     else if (s.behavior === 'سيء') poorCount = 1;
                 }
 
-                let badgeClass = s.behavior === 'مميز' ? 'bg-emerald-100 text-emerald-800' : s.behavior === 'متوسط' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800';
+                // التقييم العام يعكس العلامة الأكثر تكراراً في سجلات المتابعة.
+                const ratingCounts = { 'مميز': excellentCount, 'متوسط': averageCount, 'سيء': poorCount };
+                const highestCount = Math.max(excellentCount, averageCount, poorCount);
+                let overallEvaluation = 'غير محدد';
+                if (highestCount > 0) {
+                    const leadingMarks = Object.keys(ratingCounts).filter(mark => ratingCounts[mark] === highestCount);
+                    if (leadingMarks.length === 1) {
+                        overallEvaluation = leadingMarks[0];
+                    } else {
+                        // عند التعادل، يُعتمد أحدث تقييم من بين التقييمات المتعادلة.
+                        const latestTiedLog = relevantBehaviorLogs
+                            .filter(log => log && leadingMarks.includes(log.mark))
+                            .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))[0];
+                        overallEvaluation = latestTiedLog
+                            ? latestTiedLog.mark
+                            : (leadingMarks.includes(s.behavior) ? s.behavior : leadingMarks[0]);
+                    }
+                }
+                const badgeClass = overallEvaluation === 'مميز'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : overallEvaluation === 'متوسط'
+                        ? 'bg-amber-100 text-amber-800'
+                        : overallEvaluation === 'سيء'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-slate-100 text-slate-600';
 
                 return `
                     <tr class="border-b border-slate-100 text-[11px]">
@@ -3280,7 +3304,7 @@
                         <td class="p-2 text-center text-rose-400 font-black">${poorCount}</td>
                         <td class="p-2 text-center">
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">
-                                ${s.behavior || 'غير محدد'}
+                                ${overallEvaluation}
                             </span>
                         </td>
                     </tr>
